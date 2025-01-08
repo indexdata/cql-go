@@ -21,9 +21,10 @@ const (
 )
 
 type lexer struct {
-	input string
-	pos   int
-	ch    rune
+	input  string
+	pos    int
+	ch     rune
+	strict bool
 }
 
 func (l *lexer) next() rune {
@@ -87,25 +88,25 @@ func (l *lexer) lex() (tok token, value string) {
 		return token_rp, ")"
 	case '"':
 		l.ch = l.next()
-		var value strings.Builder
+		var sb strings.Builder
 		for l.ch != 0 && l.ch != utf8.RuneError {
 			if l.ch == '"' {
 				l.ch = l.next()
 				break
 			}
-			value.WriteRune(l.ch)
+			sb.WriteRune(l.ch)
 			if l.ch == '\\' {
 				l.ch = l.next()
 				if l.ch != 0 && l.ch != utf8.RuneError {
-					value.WriteRune(l.ch)
+					sb.WriteRune(l.ch)
 				}
 			}
 			l.ch = l.next()
 		}
-		return token_simple_string, value.String()
+		return token_simple_string, sb.String()
 	default:
-		var value strings.Builder
-		var relation_like bool = false
+		var sb strings.Builder
+		var relation_like bool = l.strict
 		for l.ch != 0 && l.ch != utf8.RuneError {
 			if strings.ContainsRune(" \n()=<>/", l.ch) {
 				break
@@ -113,23 +114,39 @@ func (l *lexer) lex() (tok token, value string) {
 			if l.ch == '.' {
 				relation_like = true
 			}
-			value.WriteRune(l.ch)
+			sb.WriteRune(l.ch)
 			if l.ch == '\\' {
 				l.ch = l.next()
 				if l.ch != 0 && l.ch != utf8.RuneError {
-					value.WriteRune(l.ch)
+					sb.WriteRune(l.ch)
 				}
 			}
 			l.ch = l.next()
 		}
-		if relation_like {
-			return token_prefix_name, value.String()
+		value := sb.String()
+		if strings.EqualFold(value, "and") ||
+			strings.EqualFold(value, "or") ||
+			strings.EqualFold(value, "not") ||
+			strings.EqualFold(value, "prox") {
+			return token_bool_op, value
 		}
-		return token_simple_string, value.String()
+		if strings.EqualFold(value, "sortby") {
+			return token_sortby, value
+		}
+		if strings.EqualFold(value, "all") ||
+			strings.EqualFold(value, "any") ||
+			strings.EqualFold(value, "adj") {
+			relation_like = true
+		}
+		if relation_like {
+			return token_prefix_name, value
+		}
+		return token_simple_string, value
 	}
 }
 
-func (l *lexer) init(input string) {
+func (l *lexer) init(input string, strict bool) {
+	l.strict = strict
 	l.input = input
 	l.pos = 0
 	l.ch = l.next()
