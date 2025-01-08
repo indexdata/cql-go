@@ -8,16 +8,16 @@ import (
 type token int
 
 const (
-	token_eos token = iota
-	token_rel_op
-	token_bool_op
-	token_simple_string
-	token_prefix_name
-	token_sortby
-	token_modifier
-	token_lp
-	token_rp
-	token_error
+	tokenEos token = iota
+	tokenRelOp
+	tokenBoolOp
+	tokenSimpleString
+	tokenPrefixName
+	tokenSortby
+	tokenModifier
+	tokenLp
+	tokenRp
+	tokenError
 )
 
 type lexer struct {
@@ -49,43 +49,43 @@ func (l *lexer) lex() (tok token, value string) {
 	}
 	switch l.ch {
 	case 0:
-		return token_eos, ""
+		return tokenEos, ""
 	case utf8.RuneError:
-		return token_error, ""
+		return tokenError, ""
 	case '=':
 		l.ch = l.next()
 		if l.ch == '=' {
 			l.ch = l.next()
-			return token_rel_op, "=="
+			return tokenRelOp, "=="
 		}
-		return token_rel_op, "="
+		return tokenRelOp, "="
 	case '<':
 		l.ch = l.next()
 		if l.ch == '=' {
 			l.ch = l.next()
-			return token_rel_op, "<="
+			return tokenRelOp, "<="
 		}
 		if l.ch == '>' {
 			l.ch = l.next()
-			return token_rel_op, "<>"
+			return tokenRelOp, "<>"
 		}
-		return token_rel_op, "<"
+		return tokenRelOp, "<"
 	case '>':
 		l.ch = l.next()
 		if l.ch == '=' {
 			l.ch = l.next()
-			return token_rel_op, ">="
+			return tokenRelOp, ">="
 		}
-		return token_rel_op, ">"
+		return tokenRelOp, ">"
 	case '/':
 		l.ch = l.next()
-		return token_modifier, "/"
+		return tokenModifier, "/"
 	case '(':
 		l.ch = l.next()
-		return token_lp, "("
+		return tokenLp, "("
 	case ')':
 		l.ch = l.next()
-		return token_rp, ")"
+		return tokenRp, ")"
 	case '"':
 		l.ch = l.next()
 		var sb strings.Builder
@@ -103,7 +103,7 @@ func (l *lexer) lex() (tok token, value string) {
 			}
 			l.ch = l.next()
 		}
-		return token_simple_string, sb.String()
+		return tokenSimpleString, sb.String()
 	default:
 		var sb strings.Builder
 		var relation_like bool = l.strict
@@ -128,10 +128,10 @@ func (l *lexer) lex() (tok token, value string) {
 			strings.EqualFold(value, "or") ||
 			strings.EqualFold(value, "not") ||
 			strings.EqualFold(value, "prox") {
-			return token_bool_op, value
+			return tokenBoolOp, value
 		}
 		if strings.EqualFold(value, "sortby") {
-			return token_sortby, value
+			return tokenSortby, value
 		}
 		if strings.EqualFold(value, "all") ||
 			strings.EqualFold(value, "any") ||
@@ -139,9 +139,9 @@ func (l *lexer) lex() (tok token, value string) {
 			relation_like = true
 		}
 		if relation_like {
-			return token_prefix_name, value
+			return tokenPrefixName, value
 		}
-		return token_simple_string, value
+		return tokenSimpleString, value
 	}
 }
 

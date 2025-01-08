@@ -21,14 +21,14 @@ func TestLexer(t *testing.T) {
 			input:  "= == > >= < <= <>",
 			strict: false,
 			expected: []tokenResult{
-				{token: token_rel_op, value: "="},
-				{token: token_rel_op, value: "=="},
-				{token: token_rel_op, value: ">"},
-				{token: token_rel_op, value: ">="},
-				{token: token_rel_op, value: "<"},
-				{token: token_rel_op, value: "<="},
-				{token: token_rel_op, value: "<>"},
-				{token: token_eos, value: ""},
+				{token: tokenRelOp, value: "="},
+				{token: tokenRelOp, value: "=="},
+				{token: tokenRelOp, value: ">"},
+				{token: tokenRelOp, value: ">="},
+				{token: tokenRelOp, value: "<"},
+				{token: tokenRelOp, value: "<="},
+				{token: tokenRelOp, value: "<>"},
+				{token: tokenEos, value: ""},
 			},
 		},
 		{
@@ -36,10 +36,10 @@ func TestLexer(t *testing.T) {
 			input:  "()/",
 			strict: false,
 			expected: []tokenResult{
-				{token: token_lp, value: "("},
-				{token: token_rp, value: ")"},
-				{token: token_modifier, value: "/"},
-				{token: token_eos, value: ""},
+				{token: tokenLp, value: "("},
+				{token: tokenRp, value: ")"},
+				{token: tokenModifier, value: "/"},
+				{token: tokenEos, value: ""},
 			},
 		},
 		{
@@ -47,10 +47,10 @@ func TestLexer(t *testing.T) {
 			input:  "\"\" \"x\\\"y\"(",
 			strict: false,
 			expected: []tokenResult{
-				{token: token_simple_string, value: ""},
-				{token: token_simple_string, value: "x\\\"y"},
-				{token: token_lp, value: "("},
-				{token: token_eos, value: ""},
+				{token: tokenSimpleString, value: ""},
+				{token: tokenSimpleString, value: "x\\\"y"},
+				{token: tokenLp, value: "("},
+				{token: tokenEos, value: ""},
 			},
 		},
 		{
@@ -58,8 +58,8 @@ func TestLexer(t *testing.T) {
 			input:  "\"", // unterminated quoted string
 			strict: false,
 			expected: []tokenResult{
-				{token: token_simple_string, value: ""},
-				{token: token_eos, value: ""},
+				{token: tokenSimpleString, value: ""},
+				{token: tokenEos, value: ""},
 			},
 		},
 		{
@@ -67,8 +67,8 @@ func TestLexer(t *testing.T) {
 			input:  "\"\\", // unterminated backslash sequence
 			strict: false,
 			expected: []tokenResult{
-				{token: token_simple_string, value: "\\"},
-				{token: token_eos, value: ""},
+				{token: tokenSimpleString, value: "\\"},
+				{token: tokenEos, value: ""},
 			},
 		},
 		{
@@ -76,18 +76,18 @@ func TestLexer(t *testing.T) {
 			input:  "And oR Not PROX Sortby name x.relation all any adj x\\.y",
 			strict: false,
 			expected: []tokenResult{
-				{token: token_bool_op, value: "And"},
-				{token: token_bool_op, value: "oR"},
-				{token: token_bool_op, value: "Not"},
-				{token: token_bool_op, value: "PROX"},
-				{token: token_sortby, value: "Sortby"},
-				{token: token_simple_string, value: "name"},
-				{token: token_prefix_name, value: "x.relation"},
-				{token: token_prefix_name, value: "all"},
-				{token: token_prefix_name, value: "any"},
-				{token: token_prefix_name, value: "adj"},
-				{token: token_simple_string, value: "x\\.y"},
-				{token: token_eos, value: ""},
+				{token: tokenBoolOp, value: "And"},
+				{token: tokenBoolOp, value: "oR"},
+				{token: tokenBoolOp, value: "Not"},
+				{token: tokenBoolOp, value: "PROX"},
+				{token: tokenSortby, value: "Sortby"},
+				{token: tokenSimpleString, value: "name"},
+				{token: tokenPrefixName, value: "x.relation"},
+				{token: tokenPrefixName, value: "all"},
+				{token: tokenPrefixName, value: "any"},
+				{token: tokenPrefixName, value: "adj"},
+				{token: tokenSimpleString, value: "x\\.y"},
+				{token: tokenEos, value: ""},
 			},
 		},
 		{
@@ -95,18 +95,18 @@ func TestLexer(t *testing.T) {
 			input:  "And oR Not PROX Sortby name x.relation all any adj x\\.y",
 			strict: true,
 			expected: []tokenResult{
-				{token: token_bool_op, value: "And"},
-				{token: token_bool_op, value: "oR"},
-				{token: token_bool_op, value: "Not"},
-				{token: token_bool_op, value: "PROX"},
-				{token: token_sortby, value: "Sortby"},
-				{token: token_prefix_name, value: "name"},
-				{token: token_prefix_name, value: "x.relation"},
-				{token: token_prefix_name, value: "all"},
-				{token: token_prefix_name, value: "any"},
-				{token: token_prefix_name, value: "adj"},
-				{token: token_prefix_name, value: "x\\.y"},
-				{token: token_eos, value: ""},
+				{token: tokenBoolOp, value: "And"},
+				{token: tokenBoolOp, value: "oR"},
+				{token: tokenBoolOp, value: "Not"},
+				{token: tokenBoolOp, value: "PROX"},
+				{token: tokenSortby, value: "Sortby"},
+				{token: tokenPrefixName, value: "name"},
+				{token: tokenPrefixName, value: "x.relation"},
+				{token: tokenPrefixName, value: "all"},
+				{token: tokenPrefixName, value: "any"},
+				{token: tokenPrefixName, value: "adj"},
+				{token: tokenPrefixName, value: "x\\.y"},
+				{token: tokenEos, value: ""},
 			},
 		},
 	} {
@@ -125,7 +125,7 @@ func TestLexer(t *testing.T) {
 				if val != testcase.expected[i].value {
 					t.Fatalf("value mismatch %v != %v at %v", val, testcase.expected[i].value, i)
 				}
-				last = tok == token_eos
+				last = tok == tokenEos
 			}
 			if !last {
 				t.Fatalf("EOS after expected results")
