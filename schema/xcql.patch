@@ -1,0 +1,11 @@
+--- xcql1.xsd	2025-01-10 17:14:53.563927468 +0100
++++ xcql.xsd	2025-01-10 16:12:10.635939938 +0100
+@@ -91,7 +91,7 @@
+ 	<xs:complexType name="keyDefinition">
+ 		<xs:sequence>
+ 			<xs:element ref="index"/>
+-			<xs:element ref="modifiers"/>
++			<xs:element ref="modifiers" minOccurs="0"/>
+ 		</xs:sequence>
+ 	</xs:complexType>
+ 	<!-- 

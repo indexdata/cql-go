@@ -132,7 +132,26 @@ func (p *Parser) Parse(input string) (*Node, error) {
 
 	c := context{index: "cql.serverChoice", relation: "="}
 	node, err := p.cqlQuery(&c)
-	if err == nil && p.look != tokenEos {
+	if err != nil {
+		return nil, err
+	}
+	if p.look == tokenSortby {
+		p.next()
+		var children []*Node
+		children = append(children, node)
+		for p.isSearchTerm() {
+			index := p.value
+			p.next()
+			mods, err := p.modifiers()
+			if err != nil {
+				return nil, err
+			}
+			snode := &Node{kind: SortOp, index: index, children: mods}
+			children = append(children, snode)
+		}
+		node = &Node{kind: SortOp, children: children}
+	}
+	if p.look != tokenEos {
 		return nil, &ParseError{"EOF expected", p.lexer.pos}
 	}
 	return node, err
