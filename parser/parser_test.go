@@ -5,7 +5,7 @@ import (
 )
 
 func TestSimple(t *testing.T) {
-	var p Parser
+	var p CqlParser
 
 	node, err := p.Parse("beta")
 	if err != nil || node == nil {
@@ -19,7 +19,7 @@ func TestSimple(t *testing.T) {
 }
 
 func TestParseXml(t *testing.T) {
-	var p Parser
+	var p CqlParser
 
 	for _, testcase := range []struct {
 		name   string
