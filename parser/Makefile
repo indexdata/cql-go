@@ -1,7 +1,7 @@
 .PHONY: all test coverage clean
 
 all:
-	go build 
+	go build
 
 test:
 	go test

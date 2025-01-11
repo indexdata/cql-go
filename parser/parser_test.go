@@ -99,9 +99,9 @@ func TestParseXml(t *testing.T) {
 			ok:     true,
 			expect: `<xcql xmlns="http://docs.oasis-open.org/ns/search-ws/xcql">
 <triple>
-<boolean>
+<Boolean>
 <value>and</value>
-</boolean>
+</Boolean>
 <leftOperand>
 <searchClause>
 <index>year</index>
@@ -131,7 +131,7 @@ func TestParseXml(t *testing.T) {
 			ok:     true,
 			expect: `<xcql xmlns="http://docs.oasis-open.org/ns/search-ws/xcql">
 <triple>
-<boolean>
+<Boolean>
 <value>prox</value>
 <modifiers>
 <modifier>
@@ -140,7 +140,7 @@ func TestParseXml(t *testing.T) {
 <value>1</value>
 </modifier>
 </modifiers>
-</boolean>
+</Boolean>
 <leftOperand>
 <searchClause>
 <index>cql.serverChoice</index>
@@ -212,6 +212,43 @@ func TestParseXml(t *testing.T) {
 <type>asc</type>
 </modifier>
 </modifiers>
+</key>
+</sortKeys>
+</xcql>
+`,
+		},
+		{
+			name:   "sort3",
+			input:  "ti=a and b sortby title",
+			strict: false,
+			ok:     true,
+			expect: `<xcql xmlns="http://docs.oasis-open.org/ns/search-ws/xcql">
+<triple>
+<Boolean>
+<value>and</value>
+</Boolean>
+<leftOperand>
+<searchClause>
+<index>ti</index>
+<relation>
+<value>=</value>
+</relation>
+<term>a</term>
+</searchClause>
+</leftOperand>
+<rightOperand>
+<searchClause>
+<index>cql.serverChoice</index>
+<relation>
+<value>=</value>
+</relation>
+<term>b</term>
+</searchClause>
+</rightOperand>
+</triple>
+<sortKeys>
+<key>
+<index>title</index>
 </key>
 </sortKeys>
 </xcql>

@@ -91,12 +91,12 @@ func (x *Xcql) toXmlSb(n *Node, level int) {
 		x.pr(level, "</searchClause>\n")
 	case BoolOp:
 		x.pr(level, "<triple>\n")
-		x.pr(level+1, "<boolean>\n")
+		x.pr(level+1, "<Boolean>\n")
 		x.pr(level+2, "<value>")
 		x.cdata(n.index)
 		x.pr(0, "</value>\n")
 		x.toXmlMod(n, level+2)
-		x.pr(level+1, "</boolean>\n")
+		x.pr(level+1, "</Boolean>\n")
 
 		x.pr(level+1, "<leftOperand>\n")
 		x.toXmlSb(n.children[0], level+2)
