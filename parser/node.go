@@ -7,6 +7,7 @@ const (
 	BoolOp
 	SearchTerm
 	SortOp
+	Prefix
 )
 
 type Node struct {

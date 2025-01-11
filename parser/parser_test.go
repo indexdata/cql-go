@@ -254,12 +254,191 @@ func TestParseXml(t *testing.T) {
 </xcql>
 `,
 		},
+		{
+			name:   "prefix1",
+			input:  ">dc = uri dc.ti = a",
+			strict: false,
+			ok:     true,
+			expect: `<xcql xmlns="http://docs.oasis-open.org/ns/search-ws/xcql">
+<prefixes>
+<prefix>
+<name>dc</name>
+<identifier>uri</identifier>
+</prefix>
+</prefixes>
+<triple>
+<searchClause>
+<index>dc.ti</index>
+<relation>
+<value>=</value>
+</relation>
+<term>a</term>
+</searchClause>
+</triple>
+</xcql>
+`,
+		},
+		{
+			name:   "prefix2",
+			input:  ">a =uri1>uri2>b=uri3 dc.ti = a",
+			strict: false,
+			ok:     true,
+			expect: `<xcql xmlns="http://docs.oasis-open.org/ns/search-ws/xcql">
+<prefixes>
+<prefix>
+<name>a</name>
+<identifier>uri1</identifier>
+</prefix>
+<prefix>
+<name></name>
+<identifier>uri2</identifier>
+</prefix>
+<prefix>
+<name>b</name>
+<identifier>uri3</identifier>
+</prefix>
+</prefixes>
+<triple>
+<searchClause>
+<index>dc.ti</index>
+<relation>
+<value>=</value>
+</relation>
+<term>a</term>
+</searchClause>
+</triple>
+</xcql>
+`,
+		},
+		{
+			name:   "prefix3",
+			input:  "a and (>dc=uri dc.ti = a)",
+			strict: false,
+			ok:     true,
+			expect: `<xcql xmlns="http://docs.oasis-open.org/ns/search-ws/xcql">
+<triple>
+<Boolean>
+<value>and</value>
+</Boolean>
+<leftOperand>
+<searchClause>
+<index>cql.serverChoice</index>
+<relation>
+<value>=</value>
+</relation>
+<term>a</term>
+</searchClause>
+</leftOperand>
+<rightOperand>
+<searchClause>
+<index>dc.ti</index>
+<relation>
+<value>=</value>
+</relation>
+<term>a</term>
+</searchClause>
+</rightOperand>
+</triple>
+</xcql>
+`,
+		},
+		{
+			name:   "",
+			input:  "",
+			strict: false,
+			ok:     false,
+			expect: "search term expected near pos 0",
+		},
+		{
+			name:   "(",
+			input:  "(",
+			strict: false,
+			ok:     false,
+			expect: "search term expected near pos 1",
+		},
+		{
+			name:   "(a)",
+			input:  "(a",
+			strict: false,
+			ok:     false,
+			expect: "missing ) near pos 2",
+		},
+		{
+			name:   "(a))",
+			input:  "(a))",
+			strict: false,
+			ok:     false,
+			expect: "EOF expected near pos 4",
+		},
+		{
+			name:   "dc.ti =",
+			input:  "dc.ti =",
+			strict: false,
+			ok:     false,
+			expect: "search term expected near pos 7",
+		},
+		{
+			name:   "a and",
+			input:  "a and",
+			strict: false,
+			ok:     false,
+			expect: "search term expected near pos 5",
+		},
+		{
+			name:   "a and /",
+			input:  "a and /",
+			strict: false,
+			ok:     false,
+			expect: "missing modifier key near pos 7",
+		},
+		{
+			name:   "a =/",
+			input:  "a =/",
+			strict: false,
+			ok:     false,
+			expect: "missing modifier key near pos 4",
+		},
+		{
+			name:   "a =/",
+			input:  "a =/b=",
+			strict: false,
+			ok:     false,
+			expect: "missing modifier value near pos 6",
+		},
+		{
+			name:   ">",
+			input:  ">",
+			strict: false,
+			ok:     false,
+			expect: "term expected after > near pos 1",
+		},
+		{
+			name:   ">dc=()",
+			input:  ">dc=()",
+			strict: false,
+			ok:     false,
+			expect: "term expected after = near pos 6",
+		},
+		{
+			name:   ">dc=uri",
+			input:  ">dc=uri",
+			strict: false,
+			ok:     false,
+			expect: "search term expected near pos 7",
+		},
+		{
+			name:   "a sortby year/",
+			input:  "a sortby year/",
+			strict: false,
+			ok:     false,
+			expect: "missing modifier key near pos 14",
+		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
 			node, err := p.Parse(testcase.input)
 			if testcase.ok {
 				if err != nil {
-					t.Fatalf("expected OK for query %s", testcase.input)
+					t.Fatalf("expected OK for query %s . Got error: %s", testcase.input, err)
 				}
 				var xcql Xcql
 				xml := xcql.ToString(node, 0)
@@ -269,6 +448,9 @@ func TestParseXml(t *testing.T) {
 			} else {
 				if err == nil {
 					t.Fatalf("expected Failure for query %s", testcase.input)
+				}
+				if err.Error() != testcase.expect {
+					t.Fatalf("Different error for query %s\nExpect:\n%s\nGot:\n%s", testcase.input, testcase.expect, err.Error())
 				}
 			}
 		})

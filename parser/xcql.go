@@ -106,10 +106,30 @@ func (x *Xcql) toXmlSb(n *Node, level int) {
 		x.toXmlSb(n.children[1], level+2)
 		x.pr(level+1, "</rightOperand>\n")
 		x.pr(level, "</triple>\n")
+	case Prefix:
+		x.toXmlSb(n.children[0], level)
 	}
 }
 
 func (x *Xcql) toXmlTop(n *Node, level int) {
+	number := 0
+	for ; n.kind == Prefix; number++ {
+		if number == 0 {
+			x.pr(level, "<prefixes>\n")
+		}
+		x.pr(level+1, "<prefix>\n")
+		x.pr(level+2, "<name>")
+		x.cdata(n.index)
+		x.pr(0, "</name>\n")
+		x.pr(level+2, "<identifier>")
+		x.cdata(n.term)
+		x.pr(0, "</identifier>\n")
+		x.pr(level+1, "</prefix>\n")
+		n = n.children[0]
+	}
+	if number > 0 {
+		x.pr(level, "</prefixes>\n")
+	}
 	if n.kind == SortOp {
 		x.toXmlTop(n.children[0], level)
 		x.pr(level, "<sortKeys>\n")
