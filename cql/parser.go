@@ -1,4 +1,4 @@
-package parser
+package cql
 
 import (
 	"fmt"
@@ -14,7 +14,7 @@ func (e *CqlError) Error() string {
 	return fmt.Sprintf("%s near pos %d", e.message, e.pos)
 }
 
-type CqlParser struct {
+type Parser struct {
 	look   token
 	value  string
 	lexer  lexer
@@ -27,22 +27,22 @@ type context struct {
 	relation_mods []*Node
 }
 
-func (p *CqlParser) next() {
+func (p *Parser) next() {
 	p.look, p.value = p.lexer.lex()
 }
 
-func (p *CqlParser) isSearchTerm() bool {
+func (p *Parser) isSearchTerm() bool {
 	return p.look == tokenSimpleString ||
 		p.look == tokenPrefixName ||
 		p.look == tokenBoolOp ||
 		p.look == tokenSortby
 }
 
-func (p *CqlParser) isRelation() bool {
+func (p *Parser) isRelation() bool {
 	return p.look == tokenRelOp || p.look == tokenPrefixName
 }
 
-func (p *CqlParser) modifiers() ([]*Node, error) {
+func (p *Parser) modifiers() ([]*Node, error) {
 	var mods []*Node
 	for p.look == tokenModifier {
 		p.next()
@@ -68,7 +68,7 @@ func (p *CqlParser) modifiers() ([]*Node, error) {
 	return mods, nil
 }
 
-func (p *CqlParser) searchClause(ctx *context) (*Node, error) {
+func (p *Parser) searchClause(ctx *context) (*Node, error) {
 	if p.look == tokenLp {
 		p.next()
 		node, err := p.cqlQuery(ctx)
@@ -100,7 +100,7 @@ func (p *CqlParser) searchClause(ctx *context) (*Node, error) {
 	return &node, nil
 }
 
-func (p *CqlParser) scopedClause(ctx *context) (*Node, error) {
+func (p *Parser) scopedClause(ctx *context) (*Node, error) {
 	left, err := p.searchClause(ctx)
 	if err != nil {
 		return nil, err
@@ -122,7 +122,7 @@ func (p *CqlParser) scopedClause(ctx *context) (*Node, error) {
 	return left, nil
 }
 
-func (p *CqlParser) cqlQuery(ctx *context) (*Node, error) {
+func (p *Parser) cqlQuery(ctx *context) (*Node, error) {
 	if p.look == tokenRelOp && p.value == ">" {
 		p.next()
 		if p.look != tokenSimpleString {
@@ -152,7 +152,7 @@ func (p *CqlParser) cqlQuery(ctx *context) (*Node, error) {
 	return p.scopedClause(ctx)
 }
 
-func (p *CqlParser) Parse(input string) (*Node, error) {
+func (p *Parser) Parse(input string) (*Node, error) {
 	p.lexer.init(input, p.strict)
 	p.look, p.value = p.lexer.lex()
 
