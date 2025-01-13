@@ -1,0 +1,44 @@
+diff --git a/.gitignore b/.gitignore
+index ecf260f..09e3304 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -1,2 +1,3 @@
+ .vscode
+ *.out
++cql-go
+diff --git a/schema/xcql.xsd b/schema/xcql.xsd
+index 5880750..eba3ee5 100644
+--- a/schema/xcql.xsd
++++ b/schema/xcql.xsd
+@@ -27,7 +27,10 @@ root element -->
+ 	<xs:complexType name="xcqlDefinition">
+ 		<xs:sequence>
+ 			<xs:element ref="prefixes" minOccurs="0"/>
+-			<xs:element ref="triple"/>
++			<xs:choice>
++				<xs:element ref="searchClause"/>
++				<xs:element ref="triple"/>
++			</xs:choice>
+ 			<xs:element ref="sortKeys" minOccurs="0"/>
+ 		</xs:sequence>
+ 	</xs:complexType>
+@@ -49,14 +52,11 @@ prefixesDefinition-->
+ 	<!--
+  tripleDefinition-->
+ 	<xs:complexType name="tripleDefinition">
+-		<xs:choice>
+-			<xs:element ref="searchClause"/>
+-			<xs:sequence>
+-				<xs:element ref="Boolean"/>
+-				<xs:element ref="leftOperand"/>
+-				<xs:element ref="rightOperand"/>
+-			</xs:sequence>
+-		</xs:choice>
++	<xs:sequence>
++		<xs:element ref="Boolean"/>
++		<xs:element ref="leftOperand"/>
++		<xs:element ref="rightOperand"/>
++	</xs:sequence>
+ 	</xs:complexType>
+ 	<!--  
+ sortKeysDefinition -->
