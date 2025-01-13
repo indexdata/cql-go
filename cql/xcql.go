@@ -94,7 +94,7 @@ func (xcql *Xcql) toXmlSb(node *CqlNode, level int) {
 	} else if node.Boolean != nil {
 		booleanNode := node.Boolean
 		xcql.pr(level, "<triple>\n")
-		xcql.pr(level+1, "<Boolean>\n")
+		xcql.pr(level+1, "<Boolean>\n") // XCQL schema: Capital B! , unlike earlier verisons
 		xcql.pr(level+2, "<value>")
 		xcql.cdata(booleanNode.Operator)
 		xcql.pr(0, "</value>\n")
@@ -110,7 +110,7 @@ func (xcql *Xcql) toXmlSb(node *CqlNode, level int) {
 		xcql.pr(level+1, "</rightOperand>\n")
 		xcql.pr(level, "</triple>\n")
 	} else if node.Prefix != nil {
-		// XCQL can ONLY represent prefixes
+		// XCQL schema currently only allows prefixes at top-level
 		xcql.toXmlSb(node.Prefix.Next, level)
 	}
 }
@@ -136,7 +136,7 @@ func (xcql *Xcql) toXmlPrefix(node *CqlNode, level int) {
 		xcql.pr(level, "</prefixes>\n")
 	}
 	if node.Search != nil {
-		xcql.pr(level, "<triple>\n")
+		xcql.pr(level, "<triple>\n") // very unfortunate that XCQL schema requires this
 		xcql.toXmlSb(node, level+1)
 		xcql.pr(level, "</triple>\n")
 	} else if node.Boolean != nil {
