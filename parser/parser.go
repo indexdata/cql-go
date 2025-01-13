@@ -68,10 +68,10 @@ func (p *CqlParser) modifiers() ([]*Node, error) {
 	return mods, nil
 }
 
-func (p *CqlParser) searchClause(c *context) (*Node, error) {
+func (p *CqlParser) searchClause(ctx *context) (*Node, error) {
 	if p.look == tokenLp {
 		p.next()
-		node, err := p.cqlQuery(c)
+		node, err := p.cqlQuery(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -93,15 +93,15 @@ func (p *CqlParser) searchClause(c *context) (*Node, error) {
 		if err != nil {
 			return nil, err
 		}
-		c := context{index: indexOrTerm, relation: relation, relation_mods: mods}
-		return p.searchClause(&c)
+		ctx := context{index: indexOrTerm, relation: relation, relation_mods: mods}
+		return p.searchClause(&ctx)
 	}
-	node := Node{kind: SearchTerm, index: c.index, relation: c.relation, term: indexOrTerm, children: c.relation_mods}
+	node := Node{kind: SearchTerm, index: ctx.index, relation: ctx.relation, term: indexOrTerm, children: ctx.relation_mods}
 	return &node, nil
 }
 
-func (p *CqlParser) scopedClause(c *context) (*Node, error) {
-	left, err := p.searchClause(c)
+func (p *CqlParser) scopedClause(ctx *context) (*Node, error) {
+	left, err := p.searchClause(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +112,7 @@ func (p *CqlParser) scopedClause(c *context) (*Node, error) {
 		if err != nil {
 			return nil, err
 		}
-		right, err := p.searchClause(c)
+		right, err := p.searchClause(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -122,7 +122,7 @@ func (p *CqlParser) scopedClause(c *context) (*Node, error) {
 	return left, nil
 }
 
-func (p *CqlParser) cqlQuery(c *context) (*Node, error) {
+func (p *CqlParser) cqlQuery(ctx *context) (*Node, error) {
 	if p.look == tokenRelOp && p.value == ">" {
 		p.next()
 		if p.look != tokenSimpleString {
@@ -142,22 +142,22 @@ func (p *CqlParser) cqlQuery(c *context) (*Node, error) {
 			uri = prefix
 			prefix = ""
 		}
-		node, err := p.cqlQuery(c)
+		node, err := p.cqlQuery(ctx)
 		if err != nil {
 			return nil, err
 		}
 		pnode := &Node{kind: Prefix, index: prefix, term: uri, children: [](*Node){node}}
 		return pnode, nil
 	}
-	return p.scopedClause(c)
+	return p.scopedClause(ctx)
 }
 
 func (p *CqlParser) Parse(input string) (*Node, error) {
 	p.lexer.init(input, p.strict)
 	p.look, p.value = p.lexer.lex()
 
-	c := context{index: "cql.serverChoice", relation: "="}
-	node, err := p.cqlQuery(&c)
+	ctx := context{index: "cql.serverChoice", relation: "="}
+	node, err := p.cqlQuery(&ctx)
 	if err != nil {
 		return nil, err
 	}
