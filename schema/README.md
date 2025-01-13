@@ -7,3 +7,8 @@ other modifiers).
 
 It's also weird that the boolean wrapper element is `Boolean` (capital B),
 unlike all other elements in the spec. In SRU 1.1 it was lower-case.
+
+Finally, the triple element is required at top-level, but not in recursive
+definition leftOperand, rightOperand. See `redundant-triple.patch ` for a
+fix for this.
+
