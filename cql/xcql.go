@@ -41,123 +41,142 @@ func (xcql *Xcql) pr(level int, msg string) {
 	xcql.sb.WriteString(msg)
 }
 
-func (xcql *Xcql) toXmlMod(node *Node, level int) {
+func (xcql *Xcql) toXmlMod(modifiers []*CqlNode, level int) {
 	number := 0
-	for _, n := range node.children {
-		if n.kind == Modifier {
-			if number == 0 {
-				xcql.pr(level, "<modifiers>\n")
-			}
-			xcql.pr(level+1, "<modifier>\n")
-			number++
-			xcql.pr(level+2, "<type>")
-			xcql.cdata(n.index)
-			xcql.pr(0, "</type>\n")
-			if len(n.relation) > 0 {
-				xcql.pr(level+2, "<comparison>")
-				xcql.cdata(n.relation)
-				xcql.pr(0, "</comparison>\n")
-			}
-			if len(n.term) > 0 {
-				xcql.pr(level+2, "<value>")
-				xcql.cdata(n.term)
-				xcql.pr(0, "</value>\n")
-			}
-			xcql.pr(level+1, "</modifier>\n")
+	for _, n := range modifiers {
+		mod := n.Search
+		if mod == nil {
+			return
 		}
+		if number == 0 {
+			xcql.pr(level, "<modifiers>\n")
+		}
+		number++
+		xcql.pr(level+1, "<modifier>\n")
+		xcql.pr(level+2, "<type>")
+		xcql.cdata(mod.Index)
+		xcql.pr(0, "</type>\n")
+		if len(mod.Relation) > 0 {
+			xcql.pr(level+2, "<comparison>")
+			xcql.cdata(mod.Relation)
+			xcql.pr(0, "</comparison>\n")
+		}
+		if len(mod.Term) > 0 {
+			xcql.pr(level+2, "<value>")
+			xcql.cdata(mod.Term)
+			xcql.pr(0, "</value>\n")
+		}
+		xcql.pr(level+1, "</modifier>\n")
 	}
 	if number > 0 {
 		xcql.pr(level, "</modifiers>\n")
 	}
 }
 
-func (xcql *Xcql) toXmlSb(node *Node, level int) {
-	switch node.kind {
-	case SearchTerm:
+func (xcql *Xcql) toXmlSb(node *CqlNode, level int) {
+	if node.Search != nil {
+		searchNode := node.Search
 		xcql.pr(level, "<searchClause>\n")
 		xcql.pr(level+1, "<index>")
-		xcql.cdata(node.index)
+		xcql.cdata(searchNode.Index)
 		xcql.pr(0, "</index>\n")
 
 		xcql.pr(level+1, "<relation>\n")
 		xcql.pr(level+2, "<value>")
-		xcql.cdata(node.relation)
+		xcql.cdata(searchNode.Relation)
 		xcql.pr(0, "</value>\n")
 		xcql.pr(level+1, "</relation>\n")
-		xcql.toXmlMod(node, level+1)
+		xcql.toXmlMod(searchNode.Modifiers, level+1)
 		xcql.pr(level+1, "<term>")
-		xcql.cdata(node.term)
+		xcql.cdata(searchNode.Term)
 		xcql.pr(0, "</term>\n")
 		xcql.pr(level, "</searchClause>\n")
-	case BoolOp:
+	} else if node.Boolean != nil {
+		booleanNode := node.Boolean
 		xcql.pr(level, "<triple>\n")
 		xcql.pr(level+1, "<Boolean>\n")
 		xcql.pr(level+2, "<value>")
-		xcql.cdata(node.index)
+		xcql.cdata(booleanNode.Operator)
 		xcql.pr(0, "</value>\n")
-		xcql.toXmlMod(node, level+2)
+		xcql.toXmlMod(booleanNode.Modifiers, level+2)
 		xcql.pr(level+1, "</Boolean>\n")
 
 		xcql.pr(level+1, "<leftOperand>\n")
-		xcql.toXmlSb(node.children[0], level+2)
+		xcql.toXmlSb(booleanNode.Left, level+2)
 		xcql.pr(level+1, "</leftOperand>\n")
 
 		xcql.pr(level+1, "<rightOperand>\n")
-		xcql.toXmlSb(node.children[1], level+2)
+		xcql.toXmlSb(booleanNode.Right, level+2)
 		xcql.pr(level+1, "</rightOperand>\n")
 		xcql.pr(level, "</triple>\n")
-	case Prefix:
-		xcql.toXmlSb(node.children[0], level)
+	} else if node.Prefix != nil {
+		// XCQL can ONLY represent prefixes
+		xcql.toXmlSb(node.Prefix.Next, level)
 	}
 }
 
-func (xcql *Xcql) toXmlTop(node *Node, level int) {
+func (xcql *Xcql) toXmlPrefix(node *CqlNode, level int) {
 	number := 0
-	for ; node.kind == Prefix; number++ {
+	for ; node.Prefix != nil; number++ {
+		prefixNode := node.Prefix
 		if number == 0 {
 			xcql.pr(level, "<prefixes>\n")
 		}
 		xcql.pr(level+1, "<prefix>\n")
 		xcql.pr(level+2, "<name>")
-		xcql.cdata(node.index)
+		xcql.cdata(prefixNode.Prefix)
 		xcql.pr(0, "</name>\n")
 		xcql.pr(level+2, "<identifier>")
-		xcql.cdata(node.term)
+		xcql.cdata(prefixNode.Uri)
 		xcql.pr(0, "</identifier>\n")
 		xcql.pr(level+1, "</prefix>\n")
-		node = node.children[0]
+		node = prefixNode.Next
 	}
 	if number > 0 {
 		xcql.pr(level, "</prefixes>\n")
 	}
-	if node.kind == SortOp {
-		xcql.toXmlTop(node.children[0], level)
-		xcql.pr(level, "<sortKeys>\n")
-		for _, n := range node.children[1:] {
-			xcql.pr(level+1, "<key>\n")
-			xcql.pr(level+2, "<index>")
-			xcql.cdata(n.index)
-			xcql.pr(0, "</index>\n")
-			xcql.toXmlMod(n, level+2)
-			xcql.pr(level+1, "</key>\n")
-		}
-		xcql.pr(level, "</sortKeys>\n")
-		return
-	}
-	if node.kind == SearchTerm {
+	if node.Search != nil {
 		xcql.pr(level, "<triple>\n")
 		xcql.toXmlSb(node, level+1)
 		xcql.pr(level, "</triple>\n")
-	} else if node.kind == BoolOp {
+	} else if node.Boolean != nil {
 		xcql.toXmlSb(node, level)
 	}
 }
 
-func (xcql *Xcql) ToString(node *Node, tab int) string {
+func (xcql *Xcql) toXmlSort(node *CqlNode, level int) {
+	// skip over sort nodes as they have to be emitted last
+	var node1 = node
+	for node1.Sort != nil {
+		node1 = node1.Sort.Next
+	}
+	xcql.toXmlPrefix(node1, level)
+
+	// sort nodes at the end
+	number := 0
+	for ; node.Sort != nil; number++ {
+		sortNode := node.Sort
+		if number == 0 {
+			xcql.pr(level, "<sortKeys>\n")
+		}
+		xcql.pr(level+1, "<key>\n")
+		xcql.pr(level+2, "<index>")
+		xcql.cdata(sortNode.Index)
+		xcql.pr(0, "</index>\n")
+		xcql.toXmlMod(sortNode.Modifiers, level+2)
+		xcql.pr(level+1, "</key>\n")
+		node = sortNode.Next
+	}
+	if number > 0 {
+		xcql.pr(level, "</sortKeys>\n")
+	}
+}
+
+func (xcql *Xcql) ToString(node *CqlNode, tab int) string {
 	xcql.sb.Reset()
 	xcql.tab = tab
 	xcql.pr(0, "<xcql xmlns=\"http://docs.oasis-open.org/ns/search-ws/xcql\">\n")
-	xcql.toXmlTop(node, 1)
+	xcql.toXmlSort(node, 1)
 	xcql.pr(0, "</xcql>\n")
 	return xcql.sb.String()
 }

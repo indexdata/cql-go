@@ -2,18 +2,36 @@ package cql
 
 type NodeType int
 
-const (
-	Modifier NodeType = iota
-	BoolOp
-	SearchTerm
-	SortOp
-	Prefix
-)
+type SearchClauseNode struct {
+	Index     string
+	Relation  string
+	Term      string
+	Modifiers []*CqlNode
+}
 
-type Node struct {
-	kind     NodeType
-	index    string
-	relation string
-	term     string
-	children []*Node
+type BooleanNode struct {
+	Operator  string
+	Relation  string
+	Modifiers []*CqlNode
+	Left      *CqlNode
+	Right     *CqlNode
+}
+
+type SortNode struct {
+	Index     string
+	Modifiers []*CqlNode
+	Next      *CqlNode
+}
+
+type PrefixNode struct {
+	Prefix string
+	Uri    string
+	Next   *CqlNode
+}
+
+type CqlNode struct {
+	Search  *SearchClauseNode
+	Boolean *BooleanNode
+	Sort    *SortNode
+	Prefix  *PrefixNode
 }

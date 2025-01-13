@@ -2,7 +2,6 @@ package cql
 
 import (
 	"fmt"
-	"slices"
 )
 
 type CqlError struct {
@@ -24,7 +23,7 @@ type Parser struct {
 type context struct {
 	index         string
 	relation      string
-	relation_mods []*Node
+	relation_mods []*CqlNode
 }
 
 func (p *Parser) next() {
@@ -42,8 +41,8 @@ func (p *Parser) isRelation() bool {
 	return p.look == tokenRelOp || p.look == tokenPrefixName
 }
 
-func (p *Parser) modifiers() ([]*Node, error) {
-	var mods []*Node
+func (p *Parser) modifiers() ([]*CqlNode, error) {
+	var mods []*CqlNode
 	for p.look == tokenModifier {
 		p.next()
 		if !p.isSearchTerm() {
@@ -57,18 +56,18 @@ func (p *Parser) modifiers() ([]*Node, error) {
 			if !p.isSearchTerm() {
 				return nil, &CqlError{"missing modifier value", p.lexer.pos}
 			}
-			node := &Node{kind: Modifier, index: modifier, relation: relation, term: p.value}
+			node := &CqlNode{Search: &SearchClauseNode{Index: modifier, Relation: relation, Term: p.value}}
 			p.next()
 			mods = append(mods, node)
 		} else {
-			node := &Node{kind: Modifier, index: modifier}
+			node := &CqlNode{Search: &SearchClauseNode{Index: modifier}}
 			mods = append(mods, node)
 		}
 	}
 	return mods, nil
 }
 
-func (p *Parser) searchClause(ctx *context) (*Node, error) {
+func (p *Parser) searchClause(ctx *context) (*CqlNode, error) {
 	if p.look == tokenLp {
 		p.next()
 		node, err := p.cqlQuery(ctx)
@@ -96,11 +95,11 @@ func (p *Parser) searchClause(ctx *context) (*Node, error) {
 		ctx := context{index: indexOrTerm, relation: relation, relation_mods: mods}
 		return p.searchClause(&ctx)
 	}
-	node := Node{kind: SearchTerm, index: ctx.index, relation: ctx.relation, term: indexOrTerm, children: ctx.relation_mods}
-	return &node, nil
+	node := &CqlNode{Search: &SearchClauseNode{Index: ctx.index, Relation: ctx.relation, Term: indexOrTerm, Modifiers: ctx.relation_mods}}
+	return node, nil
 }
 
-func (p *Parser) scopedClause(ctx *context) (*Node, error) {
+func (p *Parser) scopedClause(ctx *context) (*CqlNode, error) {
 	left, err := p.searchClause(ctx)
 	if err != nil {
 		return nil, err
@@ -116,13 +115,12 @@ func (p *Parser) scopedClause(ctx *context) (*Node, error) {
 		if err != nil {
 			return nil, err
 		}
-		mods = slices.Insert(mods, 0, left, right)
-		left = &Node{kind: BoolOp, index: op, children: mods}
+		left = &CqlNode{Boolean: &BooleanNode{Operator: op, Modifiers: mods, Left: left, Right: right}}
 	}
 	return left, nil
 }
 
-func (p *Parser) cqlQuery(ctx *context) (*Node, error) {
+func (p *Parser) cqlQuery(ctx *context) (*CqlNode, error) {
 	if p.look == tokenRelOp && p.value == ">" {
 		p.next()
 		if p.look != tokenSimpleString {
@@ -146,13 +144,13 @@ func (p *Parser) cqlQuery(ctx *context) (*Node, error) {
 		if err != nil {
 			return nil, err
 		}
-		pnode := &Node{kind: Prefix, index: prefix, term: uri, children: [](*Node){node}}
+		pnode := &CqlNode{Prefix: &PrefixNode{Prefix: prefix, Uri: uri, Next: node}}
 		return pnode, nil
 	}
 	return p.scopedClause(ctx)
 }
 
-func (p *Parser) Parse(input string) (*Node, error) {
+func (p *Parser) Parse(input string) (*CqlNode, error) {
 	p.lexer.init(input, p.strict)
 	p.look, p.value = p.lexer.lex()
 
@@ -162,9 +160,9 @@ func (p *Parser) Parse(input string) (*Node, error) {
 		return nil, err
 	}
 	if p.look == tokenSortby {
+		searchNode := node
+		var prevNode *CqlNode = nil
 		p.next()
-		var children []*Node
-		children = append(children, node)
 		for p.isSearchTerm() {
 			index := p.value
 			p.next()
@@ -172,10 +170,16 @@ func (p *Parser) Parse(input string) (*Node, error) {
 			if err != nil {
 				return nil, err
 			}
-			snode := &Node{kind: SortOp, index: index, children: mods}
-			children = append(children, snode)
+			sortNode := &CqlNode{Sort: &SortNode{Index: index, Modifiers: mods}}
+			if prevNode != nil {
+				prevNode.Sort.Next = sortNode
+			} else {
+				node = sortNode
+			}
+			prevNode = sortNode
 		}
-		node = &Node{kind: SortOp, children: children}
+		prevNode.Sort.Next = searchNode
+
 	}
 	if p.look != tokenEos {
 		return nil, &CqlError{"EOF expected", p.lexer.pos}
