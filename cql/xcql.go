@@ -65,7 +65,7 @@ func (xcql *Xcql) toXmlMod(modifiers []Modifier, level int) {
 	}
 }
 
-func (xcql *Xcql) toXmlNode(node Node, level int) {
+func (xcql *Xcql) toXmlNode(node Clause, level int) {
 	// there could be prefix handling here, but we only deal with them in toXmlPrefix
 	// to conform to XSCL schema
 	if node.SearchClause != nil {
@@ -84,29 +84,29 @@ func (xcql *Xcql) toXmlNode(node Node, level int) {
 		xcql.cdata(node.SearchClause.Term)
 		xcql.pr(0, "</term>\n")
 		xcql.pr(level, "</searchClause>\n")
-	} else if node.Boolean != nil {
+	} else if node.BoolClause != nil {
 		xcql.pr(level, "<triple>\n")
 		xcql.pr(level+1, "<Boolean>\n") // XCQL schema: Capital B! , unlike earlier versions
 		xcql.pr(level+2, "<value>")
-		xcql.cdata(string(node.Boolean.Operator))
+		xcql.cdata(string(node.BoolClause.Operator))
 		xcql.pr(0, "</value>\n")
-		xcql.toXmlMod(node.Boolean.Modifiers, level+2)
+		xcql.toXmlMod(node.BoolClause.Modifiers, level+2)
 		xcql.pr(level+1, "</Boolean>\n")
 
 		xcql.pr(level+1, "<leftOperand>\n")
-		xcql.toXmlNode(node.Boolean.Left, level+2)
+		xcql.toXmlNode(node.BoolClause.Left, level+2)
 		xcql.pr(level+1, "</leftOperand>\n")
 
 		xcql.pr(level+1, "<rightOperand>\n")
-		xcql.toXmlNode(node.Boolean.Right, level+2)
+		xcql.toXmlNode(node.BoolClause.Right, level+2)
 		xcql.pr(level+1, "</rightOperand>\n")
 		xcql.pr(level, "</triple>\n")
 	}
 }
 
-func (xcql *Xcql) toXmlPrefix(node Node, level int) {
+func (xcql *Xcql) toXmlPrefix(node Clause, level int) {
 	number := 0
-	for _, prefix := range node.Prefixes {
+	for _, prefix := range node.PrefixMap {
 		if number == 0 {
 			xcql.pr(level, "<prefixes>\n")
 		}
@@ -127,13 +127,13 @@ func (xcql *Xcql) toXmlPrefix(node Node, level int) {
 		xcql.pr(level, "<triple>\n") // very unfortunate that XCQL schema requires this
 		xcql.toXmlNode(node, level+1)
 		xcql.pr(level, "</triple>\n")
-	} else if node.Boolean != nil {
+	} else if node.BoolClause != nil {
 		xcql.toXmlNode(node, level)
 	}
 }
 
 func (xcql *Xcql) toXmlSort(query Query, level int) {
-	xcql.toXmlPrefix(query.Node, level)
+	xcql.toXmlPrefix(query.Clause, level)
 	number := 0
 	for _, sort := range query.SortSpec {
 		if number == 0 {
@@ -152,7 +152,7 @@ func (xcql *Xcql) toXmlSort(query Query, level int) {
 	}
 }
 
-func (xcql *Xcql) ToString(query Query, tab int) string {
+func (xcql *Xcql) Marshal(query Query, tab int) string {
 	xcql.sb.Reset()
 	xcql.tab = tab
 	xcql.pr(0, "<xcql xmlns=\"http://docs.oasis-open.org/ns/search-ws/xcql\">\n")

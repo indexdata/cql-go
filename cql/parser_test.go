@@ -513,7 +513,7 @@ func TestParseXml(t *testing.T) {
 					t.Fatalf("expected OK for query %s . Got error: %s", testcase.input, err)
 				}
 				var xcql Xcql
-				xml := xcql.ToString(node, testcase.tab)
+				xml := xcql.Marshal(node, testcase.tab)
 				if xml != testcase.expect {
 					t.Fatalf("Different XML for query %s\nExpect:\n%s\nGot:\n%s", testcase.input, testcase.expect, xml)
 				}

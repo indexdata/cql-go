@@ -21,7 +21,7 @@ const (
 )
 
 type Query struct {
-	Node
+	Clause
 	SortSpec []Sort
 }
 
@@ -36,10 +36,10 @@ type Modifier struct {
 	Value    string
 }
 
-type Node struct {
-	Prefixes     []Prefix
+type Clause struct {
+	PrefixMap    []Prefix
 	SearchClause *SearchClause
-	Boolean      *Boolean
+	BoolClause   *BoolClause
 }
 
 type Prefix struct {
@@ -54,9 +54,9 @@ type SearchClause struct {
 	Term      string
 }
 
-type Boolean struct {
-	Left      Node
+type BoolClause struct {
+	Left      Clause
 	Operator  Operator
 	Modifiers []Modifier
-	Right     Node
+	Right     Clause
 }
