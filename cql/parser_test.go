@@ -527,5 +527,27 @@ func TestParseXml(t *testing.T) {
 			}
 		})
 	}
+}
 
+func TestQueryString(t *testing.T) {
+	in := "> dc = \"http://deepcustard.org/\" dc.title any fish or (dc.creator any sanderson and dc.identifier = id:1234567) sortBy dc.date/sort.descending dc.title/sort.ascending"
+	var p Parser
+	q, err := p.Parse(in)
+	if err != nil {
+		t.Fatalf("parse error: %s", err)
+	}
+	out := q.String()
+	if in != out {
+		t.Fatalf("expected: %s, was: %s", in, out)
+	}
+	in = "a b c"
+	p.strict = true
+	q, err = p.Parse(in)
+	if err != nil {
+		t.Fatalf("parse error: %s", err)
+	}
+	out = q.String()
+	if in != out {
+		t.Fatalf("expected: %s, was: %s", in, out)
+	}
 }
