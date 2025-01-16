@@ -77,8 +77,8 @@ func (m *Modifier) write(sb *strings.Builder) {
 		sb.WriteString(" ")
 		sb.WriteString(string(m.Relation))
 		sb.WriteString(" ")
+		quote(sb, m.Value)
 	}
-	quote(sb, m.Value)
 }
 
 func (q *Modifier) String() string {
@@ -169,7 +169,7 @@ func (bc *BoolClause) write(sb *strings.Builder) {
 }
 
 func quote(sb *strings.Builder, s string) {
-	if strings.ContainsAny(s, " ()=<>\"/") {
+	if s == "" || strings.ContainsAny(s, " ()=<>\"/") {
 		sb.WriteString("\"")
 		sb.WriteString(s)
 		sb.WriteString("\"")

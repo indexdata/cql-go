@@ -52,8 +52,6 @@ func (xcql *Xcql) toXmlMod(modifiers []Modifier, level int) {
 			xcql.pr(level+2, "<comparison>")
 			xcql.cdata(string(mod.Relation))
 			xcql.pr(0, "</comparison>\n")
-		}
-		if len(mod.Value) > 0 {
 			xcql.pr(level+2, "<value>")
 			xcql.cdata(mod.Value)
 			xcql.pr(0, "</value>\n")
