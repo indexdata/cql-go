@@ -16,6 +16,6 @@ func main() {
 			os.Exit(1)
 		}
 		var xcql cql.Xcql
-		fmt.Println(xcql.ToString(node, 2))
+		fmt.Println(xcql.Marshal(node, 2))
 	}
 }
