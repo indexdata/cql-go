@@ -4,20 +4,6 @@ import (
 	"testing"
 )
 
-func TestSimple(t *testing.T) {
-	var p Parser
-
-	node, err := p.Parse("beta")
-	if err != nil || node == nil {
-		t.Errorf("expected ok")
-	}
-
-	_, err = p.Parse("")
-	if err == nil {
-		t.Errorf("expected error")
-	}
-}
-
 func TestParseXml(t *testing.T) {
 	var p Parser
 
@@ -25,6 +11,7 @@ func TestParseXml(t *testing.T) {
 		name   string
 		input  string
 		strict bool
+		tab    int
 		ok     bool
 		expect string
 	}{
@@ -47,6 +34,25 @@ func TestParseXml(t *testing.T) {
 `,
 		},
 		{
+			name:   "single term",
+			input:  "\"<&>\"",
+			strict: false,
+			tab:    2,
+			ok:     true,
+			expect: `<xcql xmlns="http://docs.oasis-open.org/ns/search-ws/xcql">
+  <triple>
+    <searchClause>
+      <index>cql.serverChoice</index>
+      <relation>
+        <value>=</value>
+      </relation>
+      <term>&lt;&amp;&gt;</term>
+    </searchClause>
+  </triple>
+</xcql>
+`,
+		},
+		{
 			name:   "term rel value",
 			input:  "dc.title all andersen",
 			strict: false,
@@ -57,6 +63,24 @@ func TestParseXml(t *testing.T) {
 <index>dc.title</index>
 <relation>
 <value>all</value>
+</relation>
+<term>andersen</term>
+</searchClause>
+</triple>
+</xcql>
+`,
+		},
+		{
+			name:   "term namedrelation value",
+			input:  "dc.title cql.exact andersen",
+			strict: false,
+			ok:     true,
+			expect: `<xcql xmlns="http://docs.oasis-open.org/ns/search-ws/xcql">
+<triple>
+<searchClause>
+<index>dc.title</index>
+<relation>
+<value>cql.exact</value>
 </relation>
 <term>andersen</term>
 </searchClause>
@@ -93,7 +117,7 @@ func TestParseXml(t *testing.T) {
 `,
 		},
 		{
-			name:   "booleans",
+			name:   "booleans1",
 			input:  "year < 1990 and b",
 			strict: false,
 			ok:     true,
@@ -118,6 +142,54 @@ func TestParseXml(t *testing.T) {
 <value>=</value>
 </relation>
 <term>b</term>
+</searchClause>
+</rightOperand>
+</triple>
+</xcql>
+`,
+		},
+		{
+			name:   "booleans2",
+			input:  "year > 1990 or b not c",
+			strict: false,
+			ok:     true,
+			expect: `<xcql xmlns="http://docs.oasis-open.org/ns/search-ws/xcql">
+<triple>
+<Boolean>
+<value>not</value>
+</Boolean>
+<leftOperand>
+<triple>
+<Boolean>
+<value>or</value>
+</Boolean>
+<leftOperand>
+<searchClause>
+<index>year</index>
+<relation>
+<value>&gt;</value>
+</relation>
+<term>1990</term>
+</searchClause>
+</leftOperand>
+<rightOperand>
+<searchClause>
+<index>cql.serverChoice</index>
+<relation>
+<value>=</value>
+</relation>
+<term>b</term>
+</searchClause>
+</rightOperand>
+</triple>
+</leftOperand>
+<rightOperand>
+<searchClause>
+<index>cql.serverChoice</index>
+<relation>
+<value>=</value>
+</relation>
+<term>c</term>
 </searchClause>
 </rightOperand>
 </triple>
@@ -441,7 +513,7 @@ func TestParseXml(t *testing.T) {
 					t.Fatalf("expected OK for query %s . Got error: %s", testcase.input, err)
 				}
 				var xcql Xcql
-				xml := xcql.ToString(node, 0)
+				xml := xcql.ToString(node, testcase.tab)
 				if xml != testcase.expect {
 					t.Fatalf("Different XML for query %s\nExpect:\n%s\nGot:\n%s", testcase.input, testcase.expect, xml)
 				}

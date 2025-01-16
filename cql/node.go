@@ -1,37 +1,62 @@
 package cql
 
-type NodeType int
+type Relation string
 
-type SearchClauseNode struct {
+const (
+	EQ Relation = "="
+	NE Relation = "<>"
+	LT Relation = "<"
+	GT Relation = ">"
+	LE Relation = "<="
+	GE Relation = ">="
+)
+
+type Operator string
+
+const (
+	AND  Operator = "and"
+	NOT  Operator = "not"
+	OR   Operator = "or"
+	PROX Operator = "prox"
+)
+
+type Query struct {
+	Node
+	SortSpec []Sort
+}
+
+type Sort struct {
 	Index     string
-	Relation  string
-	Term      string
-	Modifiers []*CqlNode
+	Modifiers []Modifier
 }
 
-type BooleanNode struct {
-	Operator  string
-	Relation  string
-	Modifiers []*CqlNode
-	Left      *CqlNode
-	Right     *CqlNode
+type Modifier struct {
+	Name     string
+	Relation Relation
+	Value    string
 }
 
-type SortNode struct {
-	Index     string
-	Modifiers []*CqlNode
-	Next      *CqlNode
+type Node struct {
+	Prefixes     []Prefix
+	SearchClause *SearchClause
+	Boolean      *Boolean
 }
 
-type PrefixNode struct {
+type Prefix struct {
 	Prefix string
 	Uri    string
-	Next   *CqlNode
 }
 
-type CqlNode struct {
-	Search  *SearchClauseNode
-	Boolean *BooleanNode
-	Sort    *SortNode
-	Prefix  *PrefixNode
+type SearchClause struct {
+	Index     string
+	Relation  Relation
+	Modifiers []Modifier
+	Term      string
+}
+
+type Boolean struct {
+	Left      Node
+	Operator  Operator
+	Modifiers []Modifier
+	Right     Node
 }

@@ -22,8 +22,8 @@ type Parser struct {
 
 type context struct {
 	index         string
-	relation      string
-	relation_mods []*CqlNode
+	relation      Relation
+	relation_mods []Modifier
 }
 
 func (p *Parser) next() {
@@ -33,7 +33,10 @@ func (p *Parser) next() {
 func (p *Parser) isSearchTerm() bool {
 	return p.look == tokenSimpleString ||
 		p.look == tokenPrefixName ||
-		p.look == tokenBoolOp ||
+		p.look == tokenAnd ||
+		p.look == tokenOr ||
+		p.look == tokenNot ||
+		p.look == tokenProx ||
 		p.look == tokenSortby
 }
 
@@ -41,148 +44,163 @@ func (p *Parser) isRelation() bool {
 	return p.look == tokenRelOp || p.look == tokenPrefixName
 }
 
-func (p *Parser) modifiers() ([]*CqlNode, error) {
-	var mods []*CqlNode
+func (p *Parser) modifiers() ([]Modifier, error) {
+	var mods []Modifier
 	for p.look == tokenModifier {
 		p.next()
 		if !p.isSearchTerm() {
-			return nil, &CqlError{"missing modifier key", p.lexer.pos}
+			return mods, &CqlError{"missing modifier key", p.lexer.pos}
 		}
 		modifier := p.value
 		p.next()
 		if p.look == tokenRelOp {
-			relation := p.value
+			relation := Relation(p.value)
 			p.next()
 			if !p.isSearchTerm() {
-				return nil, &CqlError{"missing modifier value", p.lexer.pos}
+				return mods, &CqlError{"missing modifier value", p.lexer.pos}
 			}
-			node := &CqlNode{Search: &SearchClauseNode{Index: modifier, Relation: relation, Term: p.value}}
+			mod := Modifier{Name: modifier, Relation: relation, Value: p.value}
 			p.next()
-			mods = append(mods, node)
+			mods = append(mods, mod)
 		} else {
-			node := &CqlNode{Search: &SearchClauseNode{Index: modifier}}
-			mods = append(mods, node)
+			mod := Modifier{Name: modifier}
+			mods = append(mods, mod)
 		}
 	}
 	return mods, nil
 }
 
-func (p *Parser) searchClause(ctx *context) (*CqlNode, error) {
+func (p *Parser) searchClause(ctx *context) (Node, error) {
 	if p.look == tokenLp {
 		p.next()
 		node, err := p.cqlQuery(ctx)
 		if err != nil {
-			return nil, err
+			return node, err
 		}
 		if p.look != tokenRp {
-			return nil, &CqlError{"missing )", p.lexer.pos}
+			return node, &CqlError{"missing )", p.lexer.pos}
 		}
 		p.next()
 		return node, nil
 	}
+	var node Node
 	if !p.isSearchTerm() {
-		return nil, &CqlError{"search term expected", p.lexer.pos}
+		return node, &CqlError{"search term expected", p.lexer.pos}
 	}
 	indexOrTerm := p.value
 	p.next()
 	if p.isRelation() {
-		relation := p.value
+		relation := Relation(p.value)
 		p.next()
 		mods, err := p.modifiers()
 		if err != nil {
-			return nil, err
+			return node, err
 		}
 		ctx := context{index: indexOrTerm, relation: relation, relation_mods: mods}
 		return p.searchClause(&ctx)
 	}
-	node := &CqlNode{Search: &SearchClauseNode{Index: ctx.index, Relation: ctx.relation, Term: indexOrTerm, Modifiers: ctx.relation_mods}}
+	sc := SearchClause{Index: ctx.index, Relation: ctx.relation, Term: indexOrTerm, Modifiers: ctx.relation_mods}
+	node.SearchClause = &sc
 	return node, nil
 }
 
-func (p *Parser) scopedClause(ctx *context) (*CqlNode, error) {
+func (p *Parser) scopedClause(ctx *context) (Node, error) {
 	left, err := p.searchClause(ctx)
 	if err != nil {
-		return nil, err
+		return left, err
 	}
-	for p.look == tokenBoolOp || p.look == tokenPrefixName {
-		op := p.value
+	for {
+		var op Operator
+		switch p.look {
+		case tokenAnd:
+			op = "and"
+		case tokenOr:
+			op = "or"
+		case tokenNot:
+			op = "not"
+		case tokenProx:
+			op = "prox"
+		default:
+			return left, nil
+		}
 		p.next()
 		mods, err := p.modifiers()
 		if err != nil {
-			return nil, err
+			return left, err
 		}
 		right, err := p.searchClause(ctx)
 		if err != nil {
-			return nil, err
+			return left, err
 		}
-		left = &CqlNode{Boolean: &BooleanNode{Operator: op, Modifiers: mods, Left: left, Right: right}}
+		bnode := Boolean{Operator: op, Modifiers: mods, Left: left, Right: right}
+		left = Node{Boolean: &bnode}
 	}
-	return left, nil
 }
 
-func (p *Parser) cqlQuery(ctx *context) (*CqlNode, error) {
-	if p.look == tokenRelOp && p.value == ">" {
+func (p *Parser) cqlQuery(ctx *context) (Node, error) {
+	var prefixes []Prefix
+	var node Node
+	for p.look == tokenRelOp && p.value == ">" {
 		p.next()
 		if p.look != tokenSimpleString {
-			return nil, &CqlError{"term expected after >", p.lexer.pos}
+			return node, &CqlError{"term expected after >", p.lexer.pos}
 		}
 		var uri string
-		prefix := p.value
+		value := p.value
 		p.next()
 		if p.look == tokenRelOp && p.value == "=" {
 			p.next()
 			if p.look != tokenSimpleString {
-				return nil, &CqlError{"term expected after =", p.lexer.pos}
+				return node, &CqlError{"term expected after =", p.lexer.pos}
 			}
 			uri = p.value
 			p.next()
 		} else {
-			uri = prefix
-			prefix = ""
+			uri = value
+			value = ""
 		}
-		node, err := p.cqlQuery(ctx)
-		if err != nil {
-			return nil, err
-		}
-		pnode := &CqlNode{Prefix: &PrefixNode{Prefix: prefix, Uri: uri, Next: node}}
-		return pnode, nil
+		prefix := Prefix{Prefix: value, Uri: uri}
+		prefixes = append(prefixes, prefix)
 	}
-	return p.scopedClause(ctx)
+	node, err := p.scopedClause(ctx)
+	node.Prefixes = prefixes
+	return node, err
 }
 
-func (p *Parser) Parse(input string) (*CqlNode, error) {
+func (p *Parser) sortKeys() ([]Sort, error) {
+	var sortList []Sort
+
+	for p.isSearchTerm() {
+		index := p.value
+		p.next()
+		mods, err := p.modifiers()
+		if err != nil {
+			return sortList, err
+		}
+		sort := Sort{Index: index, Modifiers: mods}
+		sortList = append(sortList, sort)
+	}
+	return sortList, nil
+}
+
+func (p *Parser) Parse(input string) (Query, error) {
 	p.lexer.init(input, p.strict)
 	p.look, p.value = p.lexer.lex()
 
 	ctx := context{index: "cql.serverChoice", relation: "="}
+	var query Query
+
 	node, err := p.cqlQuery(&ctx)
 	if err != nil {
-		return nil, err
+		return query, err
 	}
+	query.Node = node
 	if p.look == tokenSortby {
-		searchNode := node
-		var prevNode *CqlNode = nil
 		p.next()
-		for p.isSearchTerm() {
-			index := p.value
-			p.next()
-			mods, err := p.modifiers()
-			if err != nil {
-				return nil, err
-			}
-			sortNode := &CqlNode{Sort: &SortNode{Index: index, Modifiers: mods}}
-			if prevNode != nil {
-				prevNode.Sort.Next = sortNode
-			} else {
-				node = sortNode
-			}
-			prevNode = sortNode
-		}
-		prevNode.Sort.Next = searchNode
-
+		query.SortSpec, err = p.sortKeys()
 	}
 	if p.look != tokenEos {
-		return nil, &CqlError{"EOF expected", p.lexer.pos}
+		return query, &CqlError{"EOF expected", p.lexer.pos}
 	}
-	return node, err
+	return query, err
 }

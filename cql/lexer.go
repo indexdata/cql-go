@@ -10,7 +10,10 @@ type token int
 const (
 	tokenEos token = iota
 	tokenRelOp
-	tokenBoolOp
+	tokenAnd
+	tokenOr
+	tokenNot
+	tokenProx
 	tokenSimpleString
 	tokenPrefixName
 	tokenSortby
@@ -124,11 +127,17 @@ func (l *lexer) lex() (tok token, value string) {
 			l.ch = l.next()
 		}
 		value := sb.String()
-		if strings.EqualFold(value, "and") ||
-			strings.EqualFold(value, "or") ||
-			strings.EqualFold(value, "not") ||
-			strings.EqualFold(value, "prox") {
-			return tokenBoolOp, value
+		if strings.EqualFold(value, "and") {
+			return tokenAnd, value
+		}
+		if strings.EqualFold(value, "or") {
+			return tokenOr, value
+		}
+		if strings.EqualFold(value, "not") {
+			return tokenNot, value
+		}
+		if strings.EqualFold(value, "prox") {
+			return tokenProx, value
 		}
 		if strings.EqualFold(value, "sortby") {
 			return tokenSortby, value
