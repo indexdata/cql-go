@@ -53,6 +53,25 @@ func TestParseXml(t *testing.T) {
 `,
 		},
 		{
+			name:   "empty term",
+			input:  "\"\"",
+			strict: false,
+			tab:    2,
+			ok:     true,
+			expect: `<xcql xmlns="http://docs.oasis-open.org/ns/search-ws/xcql">
+  <triple>
+    <searchClause>
+      <index>cql.serverChoice</index>
+      <relation>
+        <value>=</value>
+      </relation>
+      <term></term>
+    </searchClause>
+  </triple>
+</xcql>
+`,
+		},
+		{
 			name:   "term rel value",
 			input:  "dc.title all andersen",
 			strict: false,
@@ -198,7 +217,7 @@ func TestParseXml(t *testing.T) {
 		},
 		{
 			name:   "prox",
-			input:  "(a prox/order=1 (b))",
+			input:  "(a prox/order=1/default=\"\" (b))",
 			strict: false,
 			ok:     true,
 			expect: `<xcql xmlns="http://docs.oasis-open.org/ns/search-ws/xcql">
@@ -210,6 +229,11 @@ func TestParseXml(t *testing.T) {
 <type>order</type>
 <comparison>=</comparison>
 <value>1</value>
+</modifier>
+<modifier>
+<type>default</type>
+<comparison>=</comparison>
+<value></value>
 </modifier>
 </modifiers>
 </Boolean>
@@ -530,7 +554,7 @@ func TestParseXml(t *testing.T) {
 }
 
 func TestQueryString(t *testing.T) {
-	in := "> dc = \"http://deepcustard.org/\" dc.title any fish or (dc.creator any sanderson and dc.identifier = id:1234567) sortBy dc.date/sort.descending dc.title/sort.ascending"
+	in := "> dc = \"http://deepcustard.org/\" dc.title any \"\" or (dc.creator =/x = y sanderson and dc.identifier = id:1234567) sortBy dc.date/sort.descending/special = 1 dc.title/sort.ascending"
 	var p Parser
 	q, err := p.Parse(in)
 	if err != nil {
@@ -538,7 +562,7 @@ func TestQueryString(t *testing.T) {
 	}
 	out := q.String()
 	if in != out {
-		t.Fatalf("expected: %s, was: %s", in, out)
+		t.Fatalf("expected:\n%s\nwas:\n%s", in, out)
 	}
 	in = "a b c"
 	p.strict = true
