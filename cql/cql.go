@@ -143,7 +143,7 @@ func (sc *SearchClause) write(sb *strings.Builder) {
 	if sc.Index != "" {
 		quote(sb, sc.Index)
 		sb.WriteString(" ")
-		quoteRel(sb, string(sc.Relation))
+		sb.WriteString(string(sc.Relation))
 		for _, mod := range sc.Modifiers {
 			sb.WriteString("/")
 			mod.write(sb)
@@ -170,16 +170,6 @@ func (bc *BoolClause) write(sb *strings.Builder) {
 
 func quote(sb *strings.Builder, s string) {
 	if s == "" || strings.ContainsAny(s, " ()=<>\"/") {
-		sb.WriteString("\"")
-		sb.WriteString(s)
-		sb.WriteString("\"")
-	} else {
-		sb.WriteString(s)
-	}
-}
-
-func quoteRel(sb *strings.Builder, s string) {
-	if strings.ContainsAny(s, " ()\"/") {
 		sb.WriteString("\"")
 		sb.WriteString(s)
 		sb.WriteString("\"")

@@ -575,3 +575,31 @@ func TestQueryString(t *testing.T) {
 		t.Fatalf("expected: %s, was: %s", in, out)
 	}
 }
+
+func TestSortString(t *testing.T) {
+	sort := Sort{Index: "title", Modifiers: []Modifier{{Name: "case"}}}
+	in := "title/case"
+	out := sort.String()
+	if in != out {
+		t.Fatalf("expected:\n%s\nwas:\n%s", in, out)
+	}
+}
+
+func TestModifierString(t *testing.T) {
+	mod := Modifier{Name: "case", Relation: "=", Value: "true"}
+	in := "case = true"
+	out := mod.String()
+	if in != out {
+		t.Fatalf("expected:\n%s\nwas:\n%s", in, out)
+	}
+}
+
+func TestClauseString(t *testing.T) {
+	searchClause := SearchClause{Term: "y"} // in reality there would always be Index + Relation
+	clause := Clause{SearchClause: &searchClause}
+	in := "y"
+	out := clause.String()
+	if in != out {
+		t.Fatalf("expected:\n%s\nwas:\n%s", in, out)
+	}
+}
