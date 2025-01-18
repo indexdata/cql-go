@@ -36,6 +36,7 @@ func (l *lexer) next() rune {
 	}
 	r, w := utf8.DecodeRuneInString(l.input[l.pos:])
 	if r == utf8.RuneError {
+		l.pos += 1
 		return r
 	}
 	l.pos += w
@@ -54,6 +55,7 @@ func (l *lexer) lex() (tok token, value string) {
 	case 0:
 		return tokenEos, ""
 	case utf8.RuneError:
+		l.ch = l.next()
 		return tokenError, ""
 	case '=':
 		l.ch = l.next()

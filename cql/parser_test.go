@@ -529,6 +529,13 @@ func TestParseXml(t *testing.T) {
 			ok:     false,
 			expect: "missing modifier key near pos 14",
 		},
+		{
+			name:   "bad rune",
+			input:  string([]byte{65, 192, 32, 65}),
+			strict: false,
+			ok:     false,
+			expect: "EOF expected near pos 3",
+		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
 			node, err := p.Parse(testcase.input)
