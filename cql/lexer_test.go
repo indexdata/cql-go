@@ -109,6 +109,17 @@ func TestLexer(t *testing.T) {
 				{token: tokenEos, value: ""},
 			},
 		},
+		{
+			name:   "bad rune",
+			input:  string([]byte{60, 192, 32, 65}),
+			strict: false,
+			expected: []tokenResult{
+				{token: tokenRelOp, value: "<"},
+				{token: tokenError, value: ""},
+				{token: tokenSimpleString, value: "A"},
+				{token: tokenEos, value: ""},
+			},
+		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
 			var l lexer
