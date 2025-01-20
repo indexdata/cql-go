@@ -171,7 +171,7 @@ type BoolClause struct {
 }
 
 func (bc *BoolClause) write(sb *strings.Builder) {
-	bc.Left.write(sb, true)
+	bc.Left.write(sb, false)
 	sb.WriteString(" ")
 	sb.WriteString(string(bc.Operator))
 	sb.WriteString(" ")

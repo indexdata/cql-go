@@ -583,6 +583,38 @@ func TestQueryString(t *testing.T) {
 	}
 }
 
+func TestQueryBrackets(t *testing.T) {
+	in := "a = x and b = y or c = z"
+	var p Parser
+	q, err := p.Parse(in)
+	if err != nil {
+		t.Fatalf("parse error: %s", err)
+	}
+	out := q.String()
+	if in != out {
+		t.Fatalf("expected:\n%s\nwas:\n%s", in, out)
+	}
+	in = "a = x and (b = y or c = z)"
+	q, err = p.Parse(in)
+	if err != nil {
+		t.Fatalf("parse error: %s", err)
+	}
+	out = q.String()
+	if in != out {
+		t.Fatalf("expected: %s, was: %s", in, out)
+	}
+	in = "(a = x or a = y) and (b = z or b = q)"
+	expected := "a = x or a = y and (b = z or b = q)"
+	q, err = p.Parse(in)
+	if err != nil {
+		t.Fatalf("parse error: %s", err)
+	}
+	out = q.String()
+	if out != expected {
+		t.Fatalf("expected: %s, was: %s", expected, out)
+	}
+}
+
 func TestSortString(t *testing.T) {
 	sort := Sort{Index: "title", Modifiers: []Modifier{{Name: "case"}}}
 	in := "title/case"
