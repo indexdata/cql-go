@@ -59,9 +59,9 @@ func (s *Sort) write(sb *strings.Builder) {
 	}
 }
 
-func (q *Sort) String() string {
+func (s *Sort) String() string {
 	var sb strings.Builder
-	q.write(&sb)
+	s.write(&sb)
 	return sb.String()
 }
 
@@ -74,16 +74,14 @@ type Modifier struct {
 func (m *Modifier) write(sb *strings.Builder) {
 	quote(sb, m.Name)
 	if m.Value != "" {
-		sb.WriteString(" ")
 		sb.WriteString(string(m.Relation))
-		sb.WriteString(" ")
 		quote(sb, m.Value)
 	}
 }
 
-func (q *Modifier) String() string {
+func (m *Modifier) String() string {
 	var sb strings.Builder
-	q.write(&sb)
+	m.write(&sb)
 	return sb.String()
 }
 
@@ -112,9 +110,9 @@ func (c *Clause) write(sb *strings.Builder, brackets bool) {
 	}
 }
 
-func (q *Clause) String() string {
+func (c *Clause) String() string {
 	var sb strings.Builder
-	q.write(&sb, false)
+	c.write(&sb, false)
 	return sb.String()
 }
 
@@ -130,6 +128,12 @@ func (p *Prefix) write(sb *strings.Builder) {
 		sb.WriteString(" = ")
 	}
 	quote(sb, p.Uri)
+}
+
+func (p *Prefix) String() string {
+	var sb strings.Builder
+	p.write(&sb)
+	return sb.String()
 }
 
 type SearchClause struct {
@@ -153,6 +157,12 @@ func (sc *SearchClause) write(sb *strings.Builder) {
 	quote(sb, sc.Term)
 }
 
+func (sc *SearchClause) String() string {
+	var sb strings.Builder
+	sc.write(&sb)
+	return sb.String()
+}
+
 type BoolClause struct {
 	Left      Clause
 	Operator  Operator
@@ -166,6 +176,12 @@ func (bc *BoolClause) write(sb *strings.Builder) {
 	sb.WriteString(string(bc.Operator))
 	sb.WriteString(" ")
 	bc.Right.write(sb, true)
+}
+
+func (bc *BoolClause) String() string {
+	var sb strings.Builder
+	bc.write(&sb)
+	return sb.String()
 }
 
 func quote(sb *strings.Builder, s string) {
