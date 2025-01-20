@@ -561,7 +561,7 @@ func TestParseXml(t *testing.T) {
 }
 
 func TestQueryString(t *testing.T) {
-	in := "> dc = \"http://deepcustard.org/\" dc.title any \"\" or (dc.creator =/x = y sanderson and dc.identifier = id:1234567) sortBy dc.date/sort.descending/special = 1 dc.title/sort.ascending"
+	in := "> dc = \"http://deepcustard.org/\" dc.title any \"\" or (dc.creator =/x=y sanderson and dc.identifier = id:1234567) sortBy dc.date/sort.descending/special=1 dc.title/sort.ascending"
 	var p Parser
 	q, err := p.Parse(in)
 	if err != nil {
@@ -594,18 +594,37 @@ func TestSortString(t *testing.T) {
 
 func TestModifierString(t *testing.T) {
 	mod := Modifier{Name: "case", Relation: "=", Value: "true"}
-	in := "case = true"
+	in := "case=true"
 	out := mod.String()
 	if in != out {
 		t.Fatalf("expected:\n%s\nwas:\n%s", in, out)
 	}
 }
 
-func TestClauseString(t *testing.T) {
-	searchClause := SearchClause{Term: "y"} // in reality there would always be Index + Relation
-	clause := Clause{SearchClause: &searchClause}
-	in := "y"
-	out := clause.String()
+func TestPrefixString(t *testing.T) {
+	px := Prefix{Prefix: "dc", Uri: "http://deepcustard.org/"}
+	in := "> dc = \"http://deepcustard.org/\""
+	out := px.String()
+	if in != out {
+		t.Fatalf("expected:\n%s\nwas:\n%s", in, out)
+	}
+}
+
+func TestCSearhClauseString(t *testing.T) {
+	searchClause := SearchClause{Index: "title", Relation: EQ, Term: "lord of the rings"}
+	in := "title = \"lord of the rings\""
+	out := searchClause.String()
+	if in != out {
+		t.Fatalf("expected:\n%s\nwas:\n%s", in, out)
+	}
+}
+
+func TestBoolClauseString(t *testing.T) {
+	searchClause1 := Clause{SearchClause: &SearchClause{Term: "x"}}
+	searchClause2 := Clause{SearchClause: &SearchClause{Term: "y"}}
+	boolClause := BoolClause{Left: searchClause1, Operator: AND, Right: searchClause2}
+	in := "x and y"
+	out := boolClause.String()
 	if in != out {
 		t.Fatalf("expected:\n%s\nwas:\n%s", in, out)
 	}
