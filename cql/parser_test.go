@@ -10,16 +10,14 @@ func TestParseXml(t *testing.T) {
 	for _, testcase := range []struct {
 		name   string
 		input  string
-		strict bool
 		tab    int
 		ok     bool
 		expect string
 	}{
 		{
-			name:   "single term",
-			input:  "myterm",
-			strict: false,
-			ok:     true,
+			name:  "single term",
+			input: "myterm",
+			ok:    true,
 			expect: `<xcql xmlns="http://docs.oasis-open.org/ns/search-ws/xcql">
 <triple>
 <searchClause>
@@ -34,11 +32,10 @@ func TestParseXml(t *testing.T) {
 `,
 		},
 		{
-			name:   "single term",
-			input:  "\"<&>\"",
-			strict: false,
-			tab:    2,
-			ok:     true,
+			name:  "single term",
+			input: "\"<&>\"",
+			tab:   2,
+			ok:    true,
 			expect: `<xcql xmlns="http://docs.oasis-open.org/ns/search-ws/xcql">
   <triple>
     <searchClause>
@@ -53,11 +50,10 @@ func TestParseXml(t *testing.T) {
 `,
 		},
 		{
-			name:   "empty term",
-			input:  "\"\"",
-			strict: false,
-			tab:    2,
-			ok:     true,
+			name:  "empty term",
+			input: "\"\"",
+			tab:   2,
+			ok:    true,
 			expect: `<xcql xmlns="http://docs.oasis-open.org/ns/search-ws/xcql">
   <triple>
     <searchClause>
@@ -72,10 +68,9 @@ func TestParseXml(t *testing.T) {
 `,
 		},
 		{
-			name:   "term rel value",
-			input:  "dc.title all andersen",
-			strict: false,
-			ok:     true,
+			name:  "term rel value",
+			input: "dc.title all andersen",
+			ok:    true,
 			expect: `<xcql xmlns="http://docs.oasis-open.org/ns/search-ws/xcql">
 <triple>
 <searchClause>
@@ -90,10 +85,9 @@ func TestParseXml(t *testing.T) {
 `,
 		},
 		{
-			name:   "term namedrelation value",
-			input:  "dc.title cql.exact andersen",
-			strict: false,
-			ok:     true,
+			name:  "term namedrelation value",
+			input: "dc.title cql.exact andersen",
+			ok:    true,
 			expect: `<xcql xmlns="http://docs.oasis-open.org/ns/search-ws/xcql">
 <triple>
 <searchClause>
@@ -108,10 +102,9 @@ func TestParseXml(t *testing.T) {
 `,
 		},
 		{
-			name:   "relation modifiers",
-			input:  "dc.title =/k1=v1/k2 andersen",
-			strict: false,
-			ok:     true,
+			name:  "relation modifiers",
+			input: "dc.title =/k1=v1/k2 andersen",
+			ok:    true,
 			expect: `<xcql xmlns="http://docs.oasis-open.org/ns/search-ws/xcql">
 <triple>
 <searchClause>
@@ -136,10 +129,9 @@ func TestParseXml(t *testing.T) {
 `,
 		},
 		{
-			name:   "booleans1",
-			input:  "year < 1990 and b",
-			strict: false,
-			ok:     true,
+			name:  "booleans1",
+			input: "year < 1990 and b",
+			ok:    true,
 			expect: `<xcql xmlns="http://docs.oasis-open.org/ns/search-ws/xcql">
 <triple>
 <Boolean>
@@ -168,10 +160,9 @@ func TestParseXml(t *testing.T) {
 `,
 		},
 		{
-			name:   "booleans2",
-			input:  "year > 1990 or b not c",
-			strict: false,
-			ok:     true,
+			name:  "booleans2",
+			input: "year > 1990 or b not c",
+			ok:    true,
 			expect: `<xcql xmlns="http://docs.oasis-open.org/ns/search-ws/xcql">
 <triple>
 <Boolean>
@@ -216,10 +207,9 @@ func TestParseXml(t *testing.T) {
 `,
 		},
 		{
-			name:   "prox",
-			input:  "(a prox/order=1/default=\"\" (b))",
-			strict: false,
-			ok:     true,
+			name:  "prox",
+			input: "(a prox/order=1/default=\"\" (b))",
+			ok:    true,
 			expect: `<xcql xmlns="http://docs.oasis-open.org/ns/search-ws/xcql">
 <triple>
 <Boolean>
@@ -260,10 +250,9 @@ func TestParseXml(t *testing.T) {
 `,
 		},
 		{
-			name:   "sort",
-			input:  "myterm1 sortby title",
-			strict: false,
-			ok:     true,
+			name:  "sort",
+			input: "myterm1 sortby title",
+			ok:    true,
 			expect: `<xcql xmlns="http://docs.oasis-open.org/ns/search-ws/xcql">
 <triple>
 <searchClause>
@@ -283,10 +272,9 @@ func TestParseXml(t *testing.T) {
 `,
 		},
 		{
-			name:   "sort2",
-			input:  "myterm1 sortby title year/asc",
-			strict: false,
-			ok:     true,
+			name:  "sort2",
+			input: "myterm1 sortby title year/asc",
+			ok:    true,
 			expect: `<xcql xmlns="http://docs.oasis-open.org/ns/search-ws/xcql">
 <triple>
 <searchClause>
@@ -314,10 +302,9 @@ func TestParseXml(t *testing.T) {
 `,
 		},
 		{
-			name:   "sort3",
-			input:  "ti=a and b sortby title",
-			strict: false,
-			ok:     true,
+			name:  "sort3",
+			input: "ti=a and b sortby title",
+			ok:    true,
 			expect: `<xcql xmlns="http://docs.oasis-open.org/ns/search-ws/xcql">
 <triple>
 <Boolean>
@@ -351,10 +338,9 @@ func TestParseXml(t *testing.T) {
 `,
 		},
 		{
-			name:   "prefix1",
-			input:  ">dc = uri dc.ti = a",
-			strict: false,
-			ok:     true,
+			name:  "prefix1",
+			input: ">dc = uri dc.ti = a",
+			ok:    true,
 			expect: `<xcql xmlns="http://docs.oasis-open.org/ns/search-ws/xcql">
 <prefixes>
 <prefix>
@@ -375,10 +361,9 @@ func TestParseXml(t *testing.T) {
 `,
 		},
 		{
-			name:   "prefix2",
-			input:  ">a =uri1>uri2>b=uri3 dc.ti = a",
-			strict: false,
-			ok:     true,
+			name:  "prefix2",
+			input: ">a =uri1>uri2>b=uri3 dc.ti = a",
+			ok:    true,
 			expect: `<xcql xmlns="http://docs.oasis-open.org/ns/search-ws/xcql">
 <prefixes>
 <prefix>
@@ -407,10 +392,9 @@ func TestParseXml(t *testing.T) {
 `,
 		},
 		{
-			name:   "prefix3",
-			input:  "a and (>dc=uri dc.ti = a)",
-			strict: false,
-			ok:     true,
+			name:  "prefix3",
+			input: "a and (>dc=uri dc.ti = a)",
+			ok:    true,
 			expect: `<xcql xmlns="http://docs.oasis-open.org/ns/search-ws/xcql">
 <triple>
 <Boolean>
@@ -441,98 +425,84 @@ func TestParseXml(t *testing.T) {
 		{
 			name:   "",
 			input:  "",
-			strict: false,
 			ok:     false,
 			expect: "search term expected near pos 0",
 		},
 		{
 			name:   "(",
 			input:  "(",
-			strict: false,
 			ok:     false,
 			expect: "search term expected near pos 1",
 		},
 		{
 			name:   "(a)",
 			input:  "(a",
-			strict: false,
 			ok:     false,
 			expect: "missing ) near pos 2",
 		},
 		{
 			name:   "(a))",
 			input:  "(a))",
-			strict: false,
 			ok:     false,
 			expect: "EOF expected near pos 4",
 		},
 		{
 			name:   "dc.ti =",
 			input:  "dc.ti =",
-			strict: false,
 			ok:     false,
 			expect: "search term expected near pos 7",
 		},
 		{
 			name:   "a and",
 			input:  "a and",
-			strict: false,
 			ok:     false,
 			expect: "search term expected near pos 5",
 		},
 		{
 			name:   "a and /",
 			input:  "a and /",
-			strict: false,
 			ok:     false,
 			expect: "missing modifier key near pos 7",
 		},
 		{
 			name:   "a =/",
 			input:  "a =/",
-			strict: false,
 			ok:     false,
 			expect: "missing modifier key near pos 4",
 		},
 		{
 			name:   "a =/",
 			input:  "a =/b=",
-			strict: false,
 			ok:     false,
 			expect: "missing modifier value near pos 6",
 		},
 		{
 			name:   ">",
 			input:  ">",
-			strict: false,
 			ok:     false,
 			expect: "term expected after > near pos 1",
 		},
 		{
 			name:   ">dc=()",
 			input:  ">dc=()",
-			strict: false,
 			ok:     false,
 			expect: "term expected after = near pos 6",
 		},
 		{
 			name:   ">dc=uri",
 			input:  ">dc=uri",
-			strict: false,
 			ok:     false,
 			expect: "search term expected near pos 7",
 		},
 		{
 			name:   "a sortby year/",
 			input:  "a sortby year/",
-			strict: false,
 			ok:     false,
 			expect: "missing modifier key near pos 14",
 		},
 		{
 			name:   "bad rune",
 			input:  string([]byte{65, 192, 32, 65}),
-			strict: false,
 			ok:     false,
 			expect: "EOF expected near pos 3",
 		},
@@ -560,6 +530,55 @@ func TestParseXml(t *testing.T) {
 	}
 }
 
+func TestMultiTermAndSymRel(t *testing.T) {
+	in := "a b"
+	var p Parser
+	q, err := p.Parse(in)
+	if err == nil || err.Error() != "EOF expected near pos 3" {
+		t.Fatalf("expected parse error but was: %v", err)
+	}
+	out := q.String()
+	if in == out {
+		t.Fatalf("expected not equals: %s, %s", in, out)
+	}
+	in = "a b c"
+	q, err = p.Parse(in)
+	if err == nil || err.Error() != "EOF expected near pos 4" {
+		t.Fatalf("expected parse error but was: %v", err)
+	}
+	out = q.String()
+	if in == out {
+		t.Fatalf("expected not equals: %s, %s", in, out)
+	}
+	in = "a b.c"
+	q, err = p.Parse(in)
+	if err == nil || err.Error() != "search term expected near pos 5" {
+		t.Fatalf("expected parse error but was: %v", err)
+	}
+	out = q.String()
+	if in == out {
+		t.Fatalf("expected not equals: %s, %s", in, out)
+	}
+	in = "a b.c d"
+	q, err = p.Parse(in)
+	if err != nil {
+		t.Fatalf("parse error: %s", err)
+	}
+	out = q.String()
+	if in != out {
+		t.Fatalf("expected:\n%s\nwas:\n%s", in, out)
+	}
+	in = "a within d"
+	q, err = p.Parse(in)
+	if err != nil {
+		t.Fatalf("parse error: %s", err)
+	}
+	out = q.String()
+	if in != out {
+		t.Fatalf("expected:\n%s\nwas:\n%s", in, out)
+	}
+}
+
 func TestQueryString(t *testing.T) {
 	in := "> dc = \"http://deepcustard.org/\" dc.title any \"\" or (dc.creator =/x=y sanderson and dc.identifier = id:1234567) sortBy dc.date/sort.descending/special=1 dc.title/sort.ascending"
 	var p Parser
@@ -570,16 +589,6 @@ func TestQueryString(t *testing.T) {
 	out := q.String()
 	if in != out {
 		t.Fatalf("expected:\n%s\nwas:\n%s", in, out)
-	}
-	in = "a b c"
-	p.strict = true
-	q, err = p.Parse(in)
-	if err != nil {
-		t.Fatalf("parse error: %s", err)
-	}
-	out = q.String()
-	if in != out {
-		t.Fatalf("expected: %s, was: %s", in, out)
 	}
 }
 
