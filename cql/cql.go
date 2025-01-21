@@ -7,12 +7,17 @@ import (
 type Relation string
 
 const (
-	EQ Relation = "="
-	NE Relation = "<>"
-	LT Relation = "<"
-	GT Relation = ">"
-	LE Relation = "<="
-	GE Relation = ">="
+	EQ       Relation = "="
+	NE       Relation = "<>"
+	LT       Relation = "<"
+	GT       Relation = ">"
+	LE       Relation = "<="
+	GE       Relation = ">="
+	ADJ      Relation = "adj"
+	ALL      Relation = "all"
+	ANY      Relation = "any"
+	ENCLOSES Relation = "encloses"
+	WITHIN   Relation = "within"
 )
 
 type Operator string

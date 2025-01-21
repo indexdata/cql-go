@@ -13,13 +13,11 @@ func TestLexer(t *testing.T) {
 	for _, testcase := range []struct {
 		name     string
 		input    string
-		strict   bool
 		expected []tokenResult
 	}{
 		{
-			name:   "relop",
-			input:  "= == > >= < <= <>",
-			strict: false,
+			name:  "relop",
+			input: "= == > >= < <= <>",
 			expected: []tokenResult{
 				{token: tokenRelOp, value: "="},
 				{token: tokenRelOp, value: "=="},
@@ -32,9 +30,8 @@ func TestLexer(t *testing.T) {
 			},
 		},
 		{
-			name:   "otherops",
-			input:  "()/",
-			strict: false,
+			name:  "otherops",
+			input: "()/",
 			expected: []tokenResult{
 				{token: tokenLp, value: "("},
 				{token: tokenRp, value: ")"},
@@ -43,9 +40,8 @@ func TestLexer(t *testing.T) {
 			},
 		},
 		{
-			name:   "qstrings1",
-			input:  "\"\" \"x\\\"y\"(",
-			strict: false,
+			name:  "qstrings1",
+			input: "\"\" \"x\\\"y\"(",
 			expected: []tokenResult{
 				{token: tokenSimpleString, value: ""},
 				{token: tokenSimpleString, value: "x\\\"y"},
@@ -54,27 +50,24 @@ func TestLexer(t *testing.T) {
 			},
 		},
 		{
-			name:   "qstrings2",
-			input:  "\"", // unterminated quoted string
-			strict: false,
+			name:  "qstrings2",
+			input: "\"", // unterminated quoted string
 			expected: []tokenResult{
 				{token: tokenSimpleString, value: ""},
 				{token: tokenEos, value: ""},
 			},
 		},
 		{
-			name:   "qstrings3",
-			input:  "\"\\", // unterminated backslash sequence
-			strict: false,
+			name:  "qstrings3",
+			input: "\"\\", // unterminated backslash sequence
 			expected: []tokenResult{
 				{token: tokenSimpleString, value: "\\"},
 				{token: tokenEos, value: ""},
 			},
 		},
 		{
-			name:   "unquoted strings",
-			input:  "And oR Not PROX Sortby name x.relation all any adj x\\.y",
-			strict: false,
+			name:  "unquoted strings",
+			input: "And oR Not PROX Sortby name x.relation all any adj x\\.y",
 			expected: []tokenResult{
 				{token: tokenAnd, value: "And"},
 				{token: tokenOr, value: "oR"},
@@ -91,28 +84,8 @@ func TestLexer(t *testing.T) {
 			},
 		},
 		{
-			name:   "unquoted strings",
-			input:  "And oR Not PROX Sortby name x.relation all any adj x\\.y",
-			strict: true,
-			expected: []tokenResult{
-				{token: tokenAnd, value: "And"},
-				{token: tokenOr, value: "oR"},
-				{token: tokenNot, value: "Not"},
-				{token: tokenProx, value: "PROX"},
-				{token: tokenSortby, value: "Sortby"},
-				{token: tokenPrefixName, value: "name"},
-				{token: tokenPrefixName, value: "x.relation"},
-				{token: tokenPrefixName, value: "all"},
-				{token: tokenPrefixName, value: "any"},
-				{token: tokenPrefixName, value: "adj"},
-				{token: tokenPrefixName, value: "x\\.y"},
-				{token: tokenEos, value: ""},
-			},
-		},
-		{
-			name:   "bad rune",
-			input:  string([]byte{60, 192, 32, 65}),
-			strict: false,
+			name:  "bad rune",
+			input: string([]byte{60, 192, 32, 65}),
 			expected: []tokenResult{
 				{token: tokenRelOp, value: "<"},
 				{token: tokenError, value: ""},
@@ -123,7 +96,7 @@ func TestLexer(t *testing.T) {
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
 			var l lexer
-			l.init(testcase.input, testcase.strict)
+			l.init(testcase.input)
 			last := false
 			for i := range testcase.expected {
 				if last {
