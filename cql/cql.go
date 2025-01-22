@@ -16,7 +16,9 @@ const (
 	ADJ      Relation = "adj"
 	ALL      Relation = "all"
 	ANY      Relation = "any"
+	SCR      Relation = "scr"
 	ENCLOSES Relation = "encloses"
+	EXACT    Relation = "exact"
 	WITHIN   Relation = "within"
 )
 
@@ -27,6 +29,18 @@ const (
 	NOT  Operator = "not"
 	OR   Operator = "or"
 	PROX Operator = "prox"
+)
+
+type CqlIndex string
+
+const (
+	AllRecords   CqlIndex = "cql.allRecords"
+	AllIndexes   CqlIndex = "cql.allIndexes"
+	AnyIndexes   CqlIndex = "cql.anyIndexes"
+	Anywhere     CqlIndex = "cql.anywhere"
+	Keywords     CqlIndex = "cql.keywords"
+	ServerChoice CqlIndex = "cql.serverChoice"
+	ResultSetId  CqlIndex = "cql.resultSetId"
 )
 
 type Query struct {
@@ -79,7 +93,7 @@ type Modifier struct {
 func (m *Modifier) write(sb *strings.Builder) {
 	quote(sb, m.Name)
 	if m.Value != "" {
-		sb.WriteString(string(m.Relation))
+		sb.WriteString(defVal(string(m.Relation), string(EQ)))
 		quote(sb, m.Value)
 	}
 }
@@ -103,6 +117,7 @@ func (c *Clause) write(sb *strings.Builder, brackets bool) {
 	}
 	if c.SearchClause != nil {
 		c.SearchClause.write(sb)
+		return
 	}
 	if c.BoolClause != nil {
 		if brackets {
@@ -112,7 +127,13 @@ func (c *Clause) write(sb *strings.Builder, brackets bool) {
 		if brackets {
 			sb.WriteString(")")
 		}
+		return
 	}
+	sb.WriteString(string(AllRecords))
+	sb.WriteString(" ")
+	sb.WriteString(string(EQ))
+	sb.WriteString(" ")
+	sb.WriteString("1")
 }
 
 func (c *Clause) String() string {
@@ -149,10 +170,13 @@ type SearchClause struct {
 }
 
 func (sc *SearchClause) write(sb *strings.Builder) {
-	if sc.Index != "" {
-		quote(sb, sc.Index)
+	idx := defVal(sc.Index, string(ServerChoice))
+	rel := defVal(string(sc.Relation), string(EQ))
+	if idx != string(ServerChoice) ||
+		(rel != string(EQ) && rel != string(SCR)) {
+		quote(sb, idx)
 		sb.WriteString(" ")
-		sb.WriteString(string(sc.Relation))
+		sb.WriteString(rel)
 		for _, mod := range sc.Modifiers {
 			sb.WriteString("/")
 			mod.write(sb)
@@ -178,7 +202,7 @@ type BoolClause struct {
 func (bc *BoolClause) write(sb *strings.Builder) {
 	bc.Left.write(sb, false)
 	sb.WriteString(" ")
-	sb.WriteString(string(bc.Operator))
+	sb.WriteString(defVal(string(bc.Operator), string(AND)))
 	sb.WriteString(" ")
 	bc.Right.write(sb, true)
 }
@@ -196,5 +220,13 @@ func quote(sb *strings.Builder, s string) {
 		sb.WriteString("\"")
 	} else {
 		sb.WriteString(s)
+	}
+}
+
+func defVal(val string, def string) string {
+	if len(val) > 0 {
+		return val
+	} else {
+		return def
 	}
 }

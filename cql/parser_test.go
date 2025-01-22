@@ -531,13 +531,32 @@ func TestParseXml(t *testing.T) {
 }
 
 func TestMultiTermAndSymRel(t *testing.T) {
-	in := "a b"
 	var p Parser
+	in := "a"
 	q, err := p.Parse(in)
+	if err != nil {
+		t.Fatalf("parse error: %s", err)
+	}
+	out := q.String()
+	if in != out {
+		t.Fatalf("expected:\n%s\nwas:\n%s", in, out)
+	}
+	in = "cql.serverChoice scr a"
+	q, err = p.Parse(in)
+	if err != nil {
+		t.Fatalf("parse error: %s", err)
+	}
+	out = q.String()
+	exp := "a"
+	if exp != out {
+		t.Fatalf("expected:\n%s\nwas:\n%s", exp, out)
+	}
+	in = "a b"
+	q, err = p.Parse(in)
 	if err == nil || err.Error() != "EOF expected near pos 3" {
 		t.Fatalf("expected parse error but was: %v", err)
 	}
-	out := q.String()
+	out = q.String()
 	if in == out {
 		t.Fatalf("expected not equals: %s, %s", in, out)
 	}
@@ -580,7 +599,7 @@ func TestMultiTermAndSymRel(t *testing.T) {
 }
 
 func TestQueryString(t *testing.T) {
-	in := "> dc = \"http://deepcustard.org/\" dc.title any \"\" or (dc.creator =/x=y sanderson and dc.identifier = id:1234567) sortBy dc.date/sort.descending/special=1 dc.title/sort.ascending"
+	in := "> dc = \"http://deepcustard.org/\" > \"\" dc.title any/\"\" \"\" or (dc.creator =/x=y sanderson and dc.identifier = id:1234567) sortBy dc.date/sort.descending/special=1 dc.title/sort.ascending"
 	var p Parser
 	q, err := p.Parse(in)
 	if err != nil {
@@ -625,47 +644,165 @@ func TestQueryBrackets(t *testing.T) {
 }
 
 func TestSortString(t *testing.T) {
-	sort := Sort{Index: "title", Modifiers: []Modifier{{Name: "case"}}}
-	in := "title/case"
+	sort := Sort{}
+	exp := "\"\""
 	out := sort.String()
-	if in != out {
-		t.Fatalf("expected:\n%s\nwas:\n%s", in, out)
+	if exp != out {
+		t.Fatalf("expected:\n%s\nwas:\n%s", exp, out)
+	}
+	sort = Sort{Index: "title"}
+	exp = "title"
+	out = sort.String()
+	if exp != out {
+		t.Fatalf("expected:\n%s\nwas:\n%s", exp, out)
+	}
+	sort = Sort{Index: "title", Modifiers: []Modifier{{Name: "case"}}}
+	exp = "title/case"
+	out = sort.String()
+	if exp != out {
+		t.Fatalf("expected:\n%s\nwas:\n%s", exp, out)
 	}
 }
 
 func TestModifierString(t *testing.T) {
-	mod := Modifier{Name: "case", Relation: "=", Value: "true"}
-	in := "case=true"
+	mod := Modifier{}
+	exp := "\"\""
 	out := mod.String()
-	if in != out {
-		t.Fatalf("expected:\n%s\nwas:\n%s", in, out)
+	if exp != out {
+		t.Fatalf("expected:\n%s\nwas:\n%s", exp, out)
+	}
+	mod = Modifier{Name: "case", Value: "true"}
+	exp = "case=true"
+	out = mod.String()
+	if exp != out {
+		t.Fatalf("expected:\n%s\nwas:\n%s", exp, out)
+	}
+	mod = Modifier{Relation: EQ}
+	exp = "\"\""
+	out = mod.String()
+	if exp != out {
+		t.Fatalf("expected:\n%s\nwas:\n%s", exp, out)
+	}
+	mod = Modifier{Value: "true"}
+	exp = "\"\"=true"
+	out = mod.String()
+	if exp != out {
+		t.Fatalf("expected:\n%s\nwas:\n%s", exp, out)
+	}
+	mod = Modifier{Name: "case", Relation: EQ}
+	exp = "case"
+	out = mod.String()
+	if exp != out {
+		t.Fatalf("expected:\n%s\nwas:\n%s", exp, out)
+	}
+	mod = Modifier{Name: "case", Relation: EQ, Value: "true"}
+	exp = "case=true"
+	out = mod.String()
+	if exp != out {
+		t.Fatalf("expected:\n%s\nwas:\n%s", exp, out)
 	}
 }
 
 func TestPrefixString(t *testing.T) {
-	px := Prefix{Prefix: "dc", Uri: "http://deepcustard.org/"}
-	in := "> dc = \"http://deepcustard.org/\""
+	px := Prefix{}
+	exp := "> \"\""
 	out := px.String()
-	if in != out {
-		t.Fatalf("expected:\n%s\nwas:\n%s", in, out)
+	if exp != out {
+		t.Fatalf("expected:\n%s\nwas:\n%s", exp, out)
+	}
+	px = Prefix{Uri: "http://deepcustard.org/"}
+	exp = "> \"http://deepcustard.org/\""
+	out = px.String()
+	if exp != out {
+		t.Fatalf("expected:\n%s\nwas:\n%s", exp, out)
+	}
+	px = Prefix{Prefix: "dc"}
+	exp = "> dc = \"\""
+	out = px.String()
+	if exp != out {
+		t.Fatalf("expected:\n%s\nwas:\n%s", exp, out)
+	}
+	px = Prefix{Prefix: "dc", Uri: "http://deepcustard.org/"}
+	exp = "> dc = \"http://deepcustard.org/\""
+	out = px.String()
+	if exp != out {
+		t.Fatalf("expected:\n%s\nwas:\n%s", exp, out)
 	}
 }
 
-func TestCSearhClauseString(t *testing.T) {
-	searchClause := SearchClause{Index: "title", Relation: EQ, Term: "lord of the rings"}
-	in := "title = \"lord of the rings\""
+func TestSearchClauseString(t *testing.T) {
+	searchClause := SearchClause{Index: "title", Relation: EQ}
+	exp := "title = \"\""
 	out := searchClause.String()
-	if in != out {
-		t.Fatalf("expected:\n%s\nwas:\n%s", in, out)
+	if exp != out {
+		t.Fatalf("expected:\n%s\nwas:\n%s", exp, out)
+	}
+	searchClause = SearchClause{Relation: EQ}
+	exp = "\"\""
+	out = searchClause.String()
+	if exp != out {
+		t.Fatalf("expected:\n%s\nwas:\n%s", exp, out)
+	}
+	searchClause = SearchClause{Relation: NE}
+	exp = "cql.serverChoice <> \"\""
+	out = searchClause.String()
+	if exp != out {
+		t.Fatalf("expected:\n%s\nwas:\n%s", exp, out)
+	}
+	searchClause = SearchClause{Index: "title"}
+	exp = "title = \"\""
+	out = searchClause.String()
+	if exp != out {
+		t.Fatalf("expected:\n%s\nwas:\n%s", exp, out)
+	}
+	searchClause = SearchClause{Term: "lord of the rings"}
+	exp = "\"lord of the rings\""
+	out = searchClause.String()
+	if exp != out {
+		t.Fatalf("expected:\n%s\nwas:\n%s", exp, out)
+	}
+	searchClause = SearchClause{Index: "title", Relation: EQ, Term: "lord of the rings"}
+	exp = "title = \"lord of the rings\""
+	out = searchClause.String()
+	if exp != out {
+		t.Fatalf("expected:\n%s\nwas:\n%s", exp, out)
 	}
 }
 
 func TestBoolClauseString(t *testing.T) {
-	searchClause1 := Clause{SearchClause: &SearchClause{Term: "x"}}
-	searchClause2 := Clause{SearchClause: &SearchClause{Term: "y"}}
-	boolClause := BoolClause{Left: searchClause1, Operator: AND, Right: searchClause2}
+	clause1 := Clause{SearchClause: &SearchClause{Term: "x"}}
+	clause2 := Clause{SearchClause: &SearchClause{Term: "y"}}
+	boolClause := BoolClause{Left: clause1, Operator: AND, Right: clause2}
 	in := "x and y"
 	out := boolClause.String()
+	if in != out {
+		t.Fatalf("expected:\n%s\nwas:\n%s", in, out)
+	}
+	boolClause = BoolClause{Left: clause1, Right: clause2}
+	in = "x and y"
+	out = boolClause.String()
+	if in != out {
+		t.Fatalf("expected:\n%s\nwas:\n%s", in, out)
+	}
+	boolClause = BoolClause{Right: clause2}
+	in = "cql.allRecords = 1 and y"
+	out = boolClause.String()
+	if in != out {
+		t.Fatalf("expected:\n%s\nwas:\n%s", in, out)
+	}
+	boolClause = BoolClause{Left: clause2}
+	in = "y and cql.allRecords = 1"
+	out = boolClause.String()
+	if in != out {
+		t.Fatalf("expected:\n%s\nwas:\n%s", in, out)
+	}
+	in = "x"
+	out = clause1.String()
+	if in != out {
+		t.Fatalf("expected:\n%s\nwas:\n%s", in, out)
+	}
+	in = "y"
+	out = clause2.String()
 	if in != out {
 		t.Fatalf("expected:\n%s\nwas:\n%s", in, out)
 	}
