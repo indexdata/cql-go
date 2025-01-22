@@ -96,7 +96,7 @@ func TestLexer(t *testing.T) {
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
 			var l lexer
-			l.init(testcase.input)
+			l.init(testcase.input, false)
 			last := false
 			for i := range testcase.expected {
 				if last {

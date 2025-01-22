@@ -24,9 +24,10 @@ const (
 )
 
 type lexer struct {
-	input string
-	pos   int
-	ch    rune
+	input  string
+	strict bool
+	pos    int
+	ch     rune
 }
 
 func (l *lexer) next() rune {
@@ -110,7 +111,7 @@ func (l *lexer) lex() (tok token, value string) {
 		return tokenSimpleString, sb.String()
 	default:
 		var sb strings.Builder
-		var isRelation bool = false // if true: multi term values are not allowed (strict)
+		var isRelation bool = l.strict
 		for l.ch != 0 && l.ch != utf8.RuneError {
 			if strings.ContainsRune(" \n()=<>/", l.ch) {
 				break
@@ -157,8 +158,9 @@ func (l *lexer) lex() (tok token, value string) {
 	}
 }
 
-func (l *lexer) init(input string) {
+func (l *lexer) init(input string, strict bool) {
 	l.input = input
+	l.strict = strict
 	l.pos = 0
 	l.ch = l.next()
 }

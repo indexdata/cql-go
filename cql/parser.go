@@ -15,9 +15,10 @@ func (e *ParseError) Error() string {
 }
 
 type Parser struct {
-	look  token
-	value string
-	lexer lexer
+	Strict bool //if true: multi term values are not allowed
+	look   token
+	value  string
+	lexer  lexer
 }
 
 type context struct {
@@ -191,7 +192,7 @@ func (p *Parser) sortKeys() ([]Sort, error) {
 }
 
 func (p *Parser) Parse(input string) (Query, error) {
-	p.lexer.init(input)
+	p.lexer.init(input, p.Strict)
 	p.look, p.value = p.lexer.lex()
 
 	ctx := context{index: "cql.serverChoice", relation: "="}
