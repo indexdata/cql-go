@@ -110,7 +110,7 @@ func (l *lexer) lex() (tok token, value string) {
 		return tokenSimpleString, sb.String()
 	default:
 		var sb strings.Builder
-		var isRelation bool = false
+		var isRelation bool = false // if true: multi term values are not allowed (strict)
 		for l.ch != 0 && l.ch != utf8.RuneError {
 			if strings.ContainsRune(" \n()=<>/", l.ch) {
 				break

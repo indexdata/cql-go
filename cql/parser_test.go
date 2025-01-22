@@ -534,21 +534,23 @@ func TestMultiTermAndSymRel(t *testing.T) {
 	in := "a b"
 	var p Parser
 	q, err := p.Parse(in)
-	if err == nil || err.Error() != "EOF expected near pos 3" {
-		t.Fatalf("expected parse error but was: %v", err)
+	if err != nil {
+		t.Fatalf("got error: %v", err)
 	}
 	out := q.String()
-	if in == out {
-		t.Fatalf("expected not equals: %s, %s", in, out)
+	exp := "cql.serverChoice = \"a b\""
+	if exp != out {
+		t.Fatalf("Expected: %s, got %s", exp, out)
 	}
 	in = "a b c"
 	q, err = p.Parse(in)
-	if err == nil || err.Error() != "EOF expected near pos 4" {
-		t.Fatalf("expected parse error but was: %v", err)
+	if err != nil {
+		t.Fatalf("got error: %v", err)
 	}
 	out = q.String()
-	if in == out {
-		t.Fatalf("expected not equals: %s, %s", in, out)
+	exp = "cql.serverChoice = \"a b c\""
+	if exp != out {
+		t.Fatalf("Expected: %s, got %s", exp, out)
 	}
 	in = "a b.c"
 	q, err = p.Parse(in)

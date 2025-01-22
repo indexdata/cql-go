@@ -2,6 +2,7 @@ package cql
 
 import (
 	"fmt"
+	"strings"
 )
 
 type ParseError struct {
@@ -98,7 +99,14 @@ func (p *Parser) searchClause(ctx *context) (Clause, error) {
 		ctx := context{index: indexOrTerm, relation: relation, relation_mods: mods}
 		return p.searchClause(&ctx)
 	}
-	sc := SearchClause{Index: ctx.index, Relation: ctx.relation, Term: indexOrTerm, Modifiers: ctx.relation_mods}
+	var sb strings.Builder
+
+	sb.WriteString(indexOrTerm)
+	for p.look == tokenSimpleString {
+		sb.WriteString(" " + p.value)
+		p.next()
+	}
+	sc := SearchClause{Index: ctx.index, Relation: ctx.relation, Term: sb.String(), Modifiers: ctx.relation_mods}
 	node.SearchClause = &sc
 	return node, nil
 }
