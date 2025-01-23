@@ -10,6 +10,7 @@ type token int
 const (
 	tokenEos token = iota
 	tokenRelOp
+	tokenRelSym
 	tokenAnd
 	tokenOr
 	tokenNot
@@ -24,10 +25,9 @@ const (
 )
 
 type lexer struct {
-	input  string
-	strict bool
-	pos    int
-	ch     rune
+	input string
+	pos   int
+	ch    rune
 }
 
 func (l *lexer) next() rune {
@@ -111,13 +111,13 @@ func (l *lexer) lex() (tok token, value string) {
 		return tokenSimpleString, sb.String()
 	default:
 		var sb strings.Builder
-		var isRelation bool = l.strict
+		var isPrefixName bool = false
 		for l.ch != 0 && l.ch != utf8.RuneError {
 			if strings.ContainsRune(" \n()=<>/", l.ch) {
 				break
 			}
 			if l.ch == '.' {
-				isRelation = true
+				isPrefixName = true
 			}
 			sb.WriteRune(l.ch)
 			if l.ch == '\\' {
@@ -151,18 +151,17 @@ func (l *lexer) lex() (tok token, value string) {
 			strings.EqualFold(value, "exact") ||
 			strings.EqualFold(value, "within") ||
 			strings.EqualFold(value, "encloses") {
-			isRelation = true
+			return tokenRelSym, value
 		}
-		if isRelation {
+		if isPrefixName {
 			return tokenPrefixName, value
 		}
 		return tokenSimpleString, value
 	}
 }
 
-func (l *lexer) init(input string, strict bool) {
+func (l *lexer) init(input string) {
 	l.input = input
-	l.strict = strict
 	l.pos = 0
 	l.ch = l.next()
 }

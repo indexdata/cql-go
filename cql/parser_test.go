@@ -554,7 +554,7 @@ func TestMultiTermAndSymRelStrict(t *testing.T) {
 	}
 	in = "a b"
 	q, err = p.Parse(in)
-	if err == nil || err.Error() != "search term expected near pos 3" {
+	if err == nil || err.Error() != "EOF expected near pos 3" {
 		t.Fatalf("expected parse error but was: %v", err)
 	}
 	out = q.String()
@@ -563,11 +563,11 @@ func TestMultiTermAndSymRelStrict(t *testing.T) {
 	}
 	in = "a b c"
 	q, err = p.Parse(in)
-	if err != nil {
-		t.Fatalf("parse error: %s", err)
+	if err == nil || err.Error() != "EOF expected near pos 4" {
+		t.Fatalf("expected parse error but was: %v", err)
 	}
 	out = q.String()
-	if in != out {
+	if in == out {
 		t.Fatalf("expected not equals: %s, %s", in, out)
 	}
 	in = "a b.c"
@@ -599,16 +599,16 @@ func TestMultiTermAndSymRelStrict(t *testing.T) {
 	}
 	in = "a b adj"
 	q, err = p.Parse(in)
-	if err != nil {
-		t.Fatalf("parse error: %s", err)
+	if err == nil || err.Error() != "EOF expected near pos 4" {
+		t.Fatalf("expected parse error but was: %v", err)
 	}
 	out = q.String()
-	if in != out {
+	if in == out {
 		t.Fatalf("expected:\n%s\nwas:\n%s", in, out)
 	}
 	in = "a b adj c"
 	q, err = p.Parse(in)
-	if err == nil || err.Error() != "search term expected near pos 9" {
+	if err == nil || err.Error() != "EOF expected near pos 4" {
 		t.Fatalf("expected parse error but was: %v", err)
 	}
 }
