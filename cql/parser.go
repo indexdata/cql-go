@@ -2,6 +2,7 @@ package cql
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -15,10 +16,11 @@ func (e *ParseError) Error() string {
 }
 
 type Parser struct {
-	Strict bool //if true: multi term values are not allowed
-	look   token
-	value  string
-	lexer  lexer
+	Strict   bool //if true: multi term values are not allowed
+	look     token
+	value    string
+	lexer    lexer
+	prefixes []string
 }
 
 type context struct {
@@ -43,7 +45,8 @@ func (p *Parser) isSearchTerm() bool {
 }
 
 func (p *Parser) isRelation() bool {
-	return p.look == tokenRelOp || p.look == tokenRelSym || p.look == tokenPrefixName
+	return p.look == tokenRelOp || p.look == tokenRelSym ||
+		(p.look == tokenPrefixName && slices.Contains(p.prefixes, strings.Split(p.value, ".")[0]))
 }
 
 func (p *Parser) modifiers() ([]Modifier, error) {
@@ -170,6 +173,7 @@ func (p *Parser) cqlQuery(ctx *context) (Clause, error) {
 			uri = value
 			value = ""
 		}
+		p.prefixes = append(p.prefixes, value)
 		prefix := Prefix{Prefix: value, Uri: uri}
 		prefixes = append(prefixes, prefix)
 	}
@@ -195,6 +199,7 @@ func (p *Parser) sortKeys() ([]Sort, error) {
 }
 
 func (p *Parser) Parse(input string) (Query, error) {
+	p.prefixes = append(p.prefixes, "cql")
 	p.lexer.init(input)
 	p.look, p.value = p.lexer.lex()
 
