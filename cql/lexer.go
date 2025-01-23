@@ -147,6 +147,8 @@ func (l *lexer) lex() (tok token, value string) {
 		if strings.EqualFold(value, "all") ||
 			strings.EqualFold(value, "any") ||
 			strings.EqualFold(value, "adj") ||
+			strings.EqualFold(value, "scr") ||
+			strings.EqualFold(value, "exact") ||
 			strings.EqualFold(value, "within") ||
 			strings.EqualFold(value, "encloses") {
 			isRelation = true
