@@ -76,9 +76,9 @@ func TestLexer(t *testing.T) {
 				{token: tokenSortby, value: "Sortby"},
 				{token: tokenSimpleString, value: "name"},
 				{token: tokenPrefixName, value: "x.relation"},
-				{token: tokenPrefixName, value: "all"},
-				{token: tokenPrefixName, value: "any"},
-				{token: tokenPrefixName, value: "adj"},
+				{token: tokenRelSym, value: "all"},
+				{token: tokenRelSym, value: "any"},
+				{token: tokenRelSym, value: "adj"},
 				{token: tokenSimpleString, value: "x\\.y"},
 				{token: tokenEos, value: ""},
 			},
@@ -96,7 +96,7 @@ func TestLexer(t *testing.T) {
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
 			var l lexer
-			l.init(testcase.input, false)
+			l.init(testcase.input)
 			last := false
 			for i := range testcase.expected {
 				if last {

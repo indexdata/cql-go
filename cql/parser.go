@@ -38,11 +38,12 @@ func (p *Parser) isSearchTerm() bool {
 		p.look == tokenOr ||
 		p.look == tokenNot ||
 		p.look == tokenProx ||
-		p.look == tokenSortby
+		p.look == tokenSortby ||
+		p.look == tokenRelSym
 }
 
 func (p *Parser) isRelation() bool {
-	return p.look == tokenRelOp || p.look == tokenPrefixName
+	return p.look == tokenRelOp || p.look == tokenRelSym || p.look == tokenPrefixName
 }
 
 func (p *Parser) modifiers() ([]Modifier, error) {
@@ -104,7 +105,7 @@ func (p *Parser) searchClause(ctx *context) (Clause, error) {
 
 	sb.WriteString(indexOrTerm)
 	if !p.Strict {
-		for p.look == tokenSimpleString || p.look == tokenPrefixName {
+		for p.look == tokenSimpleString || p.look == tokenPrefixName || p.look == tokenRelSym {
 			sb.WriteString(" " + p.value)
 			p.next()
 		}
@@ -194,7 +195,7 @@ func (p *Parser) sortKeys() ([]Sort, error) {
 }
 
 func (p *Parser) Parse(input string) (Query, error) {
-	p.lexer.init(input, p.Strict)
+	p.lexer.init(input)
 	p.look, p.value = p.lexer.lex()
 
 	ctx := context{index: "cql.serverChoice", relation: "="}
