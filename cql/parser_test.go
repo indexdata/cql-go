@@ -635,6 +635,7 @@ func TestMultiTermAndSymRel(t *testing.T) {
 	if exp != out {
 		t.Fatalf("Expected: %s, got %s", exp, out)
 	}
+	//unbound prefix is just a term
 	in = "a b.c"
 	q, err = p.Parse(in)
 	if err != nil {
@@ -645,6 +646,18 @@ func TestMultiTermAndSymRel(t *testing.T) {
 	if exp != out {
 		t.Fatalf("expected not equals: %s, %s", exp, out)
 	}
+	//bound prefixes are relations
+	in = "> b = x a b.c"
+	q, err = p.Parse(in)
+	if err == nil || err.Error() != "search term expected near pos 13" {
+		t.Fatalf("expected parse error but was: %v", err)
+	}
+	out = q.String()
+	nexp := "\"a b.c\""
+	if nexp == out {
+		t.Fatalf("expected not equals: %s, %s", exp, out)
+	}
+	//unbound prefix
 	in = "a b.c d"
 	q, err = p.Parse(in)
 	if err != nil {
@@ -654,6 +667,16 @@ func TestMultiTermAndSymRel(t *testing.T) {
 	exp = "\"a b.c d\""
 	if exp != out {
 		t.Fatalf("expected not equals: %s, %s", exp, out)
+	}
+	//bound prefix
+	in = "> b = x a b.c d"
+	q, err = p.Parse(in)
+	if err != nil {
+		t.Fatalf("parse error: %s", err)
+	}
+	out = q.String()
+	if in != out {
+		t.Fatalf("expected not equals: %s, %s", in, out)
 	}
 	in = "a within d"
 	q, err = p.Parse(in)

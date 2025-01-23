@@ -199,7 +199,7 @@ func (p *Parser) sortKeys() ([]Sort, error) {
 }
 
 func (p *Parser) Parse(input string) (Query, error) {
-	p.prefixes = append(p.prefixes, "cql")
+	p.prefixes = []string{"cql"}
 	p.lexer.init(input)
 	p.look, p.value = p.lexer.lex()
 
