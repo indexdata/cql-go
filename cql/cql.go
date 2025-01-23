@@ -1,9 +1,11 @@
+// Contextual Query Language (CQL) syntax tree API.
 package cql
 
 import (
 	"strings"
 )
 
+// CQL built-in symbolic and named relations.
 type Relation string
 
 const (
@@ -22,6 +24,7 @@ const (
 	WITHIN   Relation = "within"
 )
 
+// CQL boolean operators.
 type Operator string
 
 const (
@@ -31,6 +34,7 @@ const (
 	PROX Operator = "prox"
 )
 
+// CQL special built-in indexes.
 type CqlIndex string
 
 const (
@@ -43,6 +47,9 @@ const (
 	ResultSetId  CqlIndex = "cql.resultSetId"
 )
 
+// Represents the top-level CQL query.
+// The `Clause“ field should be provided upon initialization.
+// the `SortSpec` field is optional.
 type Query struct {
 	Clause
 	SortSpec []Sort
@@ -65,6 +72,8 @@ func (q *Query) String() string {
 	return sb.String()
 }
 
+// Represents a sort criterion.
+// If the `Index“ field is not set, the struct will stringify to an empty quoted string.
 type Sort struct {
 	Index     string
 	Modifiers []Modifier
@@ -84,6 +93,9 @@ func (s *Sort) String() string {
 	return sb.String()
 }
 
+// Represents a relation or a boolean operator modifier.
+// At least `Name` should be set otherwise the struct will stringify to an empty quoted string.
+// If `Relation` is not set but `Value` is, the `=` will be used during stringification.
 type Modifier struct {
 	Name     string
 	Relation Relation
@@ -104,6 +116,10 @@ func (m *Modifier) String() string {
 	return sb.String()
 }
 
+// Represents either a search or a boolean clause (expression).
+// Exactly one pointer field should be set when creating this struct.
+// When neither pointer is set, the clause will stringify to `cql.allRecords = 1`
+// (a special expression matching all records).
 type Clause struct {
 	PrefixMap    []Prefix
 	SearchClause *SearchClause
@@ -142,6 +158,9 @@ func (c *Clause) String() string {
 	return sb.String()
 }
 
+// Represents a prefix declaration.
+// The Prefix field can be omitted.
+// The Uri field should be set or the struct will stringify to an empty quoted string.
 type Prefix struct {
 	Prefix string
 	Uri    string
@@ -162,6 +181,9 @@ func (p *Prefix) String() string {
 	return sb.String()
 }
 
+// Represents a search clause (expression).
+// When no `Index` is given the `cql.serverChoice` is used during stringification.
+// when no `Relation` is given the `=` (aka `scr`) is used during stringification.
 type SearchClause struct {
 	Index     string
 	Relation  Relation
@@ -192,6 +214,9 @@ func (sc *SearchClause) String() string {
 	return sb.String()
 }
 
+// Represents a boolean clause (expression).
+// The `Left`, `Right` and `Operator` fields should be initialized.
+// When the operator is not set, `and` will be used during stringification.
 type BoolClause struct {
 	Left      Clause
 	Operator  Operator
