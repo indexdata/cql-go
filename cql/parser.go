@@ -2,6 +2,7 @@ package cql
 
 import (
 	"fmt"
+	"strings"
 )
 
 type ParseError struct {
@@ -14,9 +15,10 @@ func (e *ParseError) Error() string {
 }
 
 type Parser struct {
-	look  token
-	value string
-	lexer lexer
+	Strict bool //if true: multi term values are not allowed
+	look   token
+	value  string
+	lexer  lexer
 }
 
 type context struct {
@@ -98,7 +100,16 @@ func (p *Parser) searchClause(ctx *context) (Clause, error) {
 		ctx := context{index: indexOrTerm, relation: relation, relation_mods: mods}
 		return p.searchClause(&ctx)
 	}
-	sc := SearchClause{Index: ctx.index, Relation: ctx.relation, Term: indexOrTerm, Modifiers: ctx.relation_mods}
+	var sb strings.Builder
+
+	sb.WriteString(indexOrTerm)
+	if !p.Strict {
+		for p.look == tokenSimpleString || p.look == tokenPrefixName {
+			sb.WriteString(" " + p.value)
+			p.next()
+		}
+	}
+	sc := SearchClause{Index: ctx.index, Relation: ctx.relation, Term: sb.String(), Modifiers: ctx.relation_mods}
 	node.SearchClause = &sc
 	return node, nil
 }
@@ -183,7 +194,7 @@ func (p *Parser) sortKeys() ([]Sort, error) {
 }
 
 func (p *Parser) Parse(input string) (Query, error) {
-	p.lexer.init(input)
+	p.lexer.init(input, p.Strict)
 	p.look, p.value = p.lexer.lex()
 
 	ctx := context{index: "cql.serverChoice", relation: "="}
