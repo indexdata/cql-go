@@ -10,10 +10,13 @@ import (
 
 func main() {
 	var outFmt string
-	flag.StringVar(&outFmt, "t", "cql", "output format: cql, xcql")
+	var strict bool
+	flag.StringVar(&outFmt, "t", "cql", "output format: cql, xcql, struct")
+	flag.BoolVar(&strict, "s", false, "strict CQL (e.g no multi-terms)")
 	flag.Parse()
 	var p cql.Parser
 	for _, arg := range flag.Args() {
+		p.Strict = strict
 		query, err := p.Parse(arg)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "Parse failed:", err.Error())
@@ -22,6 +25,8 @@ func main() {
 		switch outFmt {
 		case "cql":
 			fmt.Println(&query)
+		case "struct":
+			fmt.Printf("%+v\n", query)
 		case "xcql":
 			fmt.Print((&cql.Xcql{}).Marshal(query, 2))
 		default:
