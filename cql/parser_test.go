@@ -611,6 +611,16 @@ func TestMultiTermAndSymRelStrict(t *testing.T) {
 	if err == nil || err.Error() != "EOF expected near pos 4" {
 		t.Fatalf("expected parse error but was: %v", err)
 	}
+	//do not mistake terms for relation
+	in = "1 2.5 6"
+	q, err = p.Parse(in)
+	if err == nil || err.Error() != "EOF expected near pos 6" {
+		t.Fatalf("expected parse error: %s", err)
+	}
+	out = q.String()
+	if in == out {
+		t.Fatalf("expected:\n%s\nwas:\n%s", exp, out)
+	}
 }
 
 func TestMultiTermAndSymRel(t *testing.T) {
@@ -704,6 +714,17 @@ func TestMultiTermAndSymRel(t *testing.T) {
 	}
 	out = q.String()
 	exp = "\"a b adj adj\""
+	if exp != out {
+		t.Fatalf("expected:\n%s\nwas:\n%s", exp, out)
+	}
+	//do not mistake terms for relation
+	in = "1 2.5 6"
+	q, err = p.Parse(in)
+	if err != nil {
+		t.Fatalf("parse error: %s", err)
+	}
+	out = q.String()
+	exp = "\"1 2.5 6\""
 	if exp != out {
 		t.Fatalf("expected:\n%s\nwas:\n%s", exp, out)
 	}
