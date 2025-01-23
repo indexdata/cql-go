@@ -103,9 +103,11 @@ func (p *Parser) searchClause(ctx *context) (Clause, error) {
 	var sb strings.Builder
 
 	sb.WriteString(indexOrTerm)
-	for p.look == tokenSimpleString {
-		sb.WriteString(" " + p.value)
-		p.next()
+	if !p.Strict {
+		for p.look == tokenSimpleString || p.look == tokenPrefixName {
+			sb.WriteString(" " + p.value)
+			p.next()
+		}
 	}
 	sc := SearchClause{Index: ctx.index, Relation: ctx.relation, Term: sb.String(), Modifiers: ctx.relation_mods}
 	node.SearchClause = &sc

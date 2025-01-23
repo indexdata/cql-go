@@ -530,6 +530,70 @@ func TestParseXml(t *testing.T) {
 	}
 }
 
+func TestMultiTermAndSymRelStrict(t *testing.T) {
+	in := "a b"
+	var p Parser
+	p.Strict = true
+	q, err := p.Parse(in)
+	if err == nil || err.Error() != "search term expected near pos 3" {
+		t.Fatalf("expected parse error but was: %v", err)
+	}
+	out := q.String()
+	if in == out {
+		t.Fatalf("expected not equals: %s, %s", in, out)
+	}
+	in = "a b c"
+	q, err = p.Parse(in)
+	if err != nil {
+		t.Fatalf("parse error: %s", err)
+	}
+	out = q.String()
+	if in != out {
+		t.Fatalf("expected not equals: %s, %s", in, out)
+	}
+	in = "a b.c"
+	q, err = p.Parse(in)
+	if err == nil || err.Error() != "search term expected near pos 5" {
+		t.Fatalf("expected parse error but was: %v", err)
+	}
+	out = q.String()
+	if in == out {
+		t.Fatalf("expected not equals: %s, %s", in, out)
+	}
+	in = "a b.c d"
+	q, err = p.Parse(in)
+	if err != nil {
+		t.Fatalf("parse error: %s", err)
+	}
+	out = q.String()
+	if in != out {
+		t.Fatalf("expected:\n%s\nwas:\n%s", in, out)
+	}
+	in = "a within d"
+	q, err = p.Parse(in)
+	if err != nil {
+		t.Fatalf("parse error: %s", err)
+	}
+	out = q.String()
+	if in != out {
+		t.Fatalf("expected:\n%s\nwas:\n%s", in, out)
+	}
+	in = "a b adj"
+	q, err = p.Parse(in)
+	if err != nil {
+		t.Fatalf("parse error: %s", err)
+	}
+	out = q.String()
+	if in != out {
+		t.Fatalf("expected:\n%s\nwas:\n%s", in, out)
+	}
+	in = "a b adj c"
+	q, err = p.Parse(in)
+	if err == nil || err.Error() != "search term expected near pos 9" {
+		t.Fatalf("expected parse error but was: %v", err)
+	}
+}
+
 func TestMultiTermAndSymRel(t *testing.T) {
 	in := "a b"
 	var p Parser
@@ -578,6 +642,26 @@ func TestMultiTermAndSymRel(t *testing.T) {
 	out = q.String()
 	if in != out {
 		t.Fatalf("expected:\n%s\nwas:\n%s", in, out)
+	}
+	in = "a b adj"
+	q, err = p.Parse(in)
+	if err != nil {
+		t.Fatalf("parse error: %s", err)
+	}
+	out = q.String()
+	exp = "cql.serverChoice = \"a b adj\""
+	if exp != out {
+		t.Fatalf("expected:\n%s\nwas:\n%s", exp, out)
+	}
+	in = "a b adj adj"
+	q, err = p.Parse(in)
+	if err != nil {
+		t.Fatalf("parse error: %s", err)
+	}
+	out = q.String()
+	exp = "cql.serverChoice = \"a b adj adj\""
+	if exp != out {
+		t.Fatalf("expected:\n%s\nwas:\n%s", exp, out)
 	}
 }
 
