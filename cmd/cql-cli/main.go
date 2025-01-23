@@ -13,8 +13,8 @@ import (
 func main() {
 	var outFmt string
 	var strict bool
-	flag.StringVar(&outFmt, "t", "cql", "output format: cql, xcql, struct")
-	flag.BoolVar(&strict, "s", false, "strict CQL (e.g no multi-terms)")
+	flag.StringVar(&outFmt, "t", "cql", "output format: cql, json, struct, xml, xcql")
+	flag.BoolVar(&strict, "s", false, "strict CQL, e.g no multi-terms (default false)")
 	flag.Parse()
 	var p cql.Parser
 	for _, arg := range flag.Args() {
