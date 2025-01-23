@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/json"
+	"encoding/xml"
 	"flag"
 	"fmt"
 	"os"
@@ -25,6 +27,12 @@ func main() {
 		switch outFmt {
 		case "cql":
 			fmt.Println(&query)
+		case "json":
+			out, _ := json.MarshalIndent(&query, "", "  ")
+			fmt.Println("%s\n", out)
+		case "xml":
+			out, _ := xml.MarshalIndent(&query, "", "  ")
+			fmt.Printf("%s\n", out)
 		case "struct":
 			fmt.Printf("%+v\n", query)
 		case "xcql":
