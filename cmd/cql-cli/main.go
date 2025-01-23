@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/indexdata/cql-go/cql"
+	"github.com/indexdata/cql-go"
 )
 
 func main() {
