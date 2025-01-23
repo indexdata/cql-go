@@ -29,7 +29,7 @@ func main() {
 			fmt.Println(&query)
 		case "json":
 			out, _ := json.MarshalIndent(&query, "", "  ")
-			fmt.Println("%s\n", out)
+			fmt.Printf("%s\n", out)
 		case "xml":
 			out, _ := xml.MarshalIndent(&query, "", "  ")
 			fmt.Printf("%s\n", out)
