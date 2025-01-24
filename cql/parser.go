@@ -7,12 +7,18 @@ import (
 )
 
 type ParseError struct {
+	query   string
 	message string
 	pos     int
 }
 
 func (e *ParseError) Error() string {
 	return fmt.Sprintf("%s near pos %d", e.message, e.pos)
+}
+
+// Returns the query with the error position marked
+func (e *ParseError) Marked() string {
+	return e.query[:e.pos] + string('\u032D') + e.query[e.pos:]
 }
 
 type Parser struct {
@@ -54,7 +60,7 @@ func (p *Parser) modifiers() ([]Modifier, error) {
 	for p.look == tokenModifier {
 		p.next()
 		if !p.isSearchTerm() {
-			return mods, &ParseError{"missing modifier key", p.lexer.pos}
+			return mods, &ParseError{p.lexer.input, "missing modifier key", p.lexer.pos}
 		}
 		modifier := p.value
 		p.next()
@@ -62,7 +68,7 @@ func (p *Parser) modifiers() ([]Modifier, error) {
 			relation := Relation(p.value)
 			p.next()
 			if !p.isSearchTerm() {
-				return mods, &ParseError{"missing modifier value", p.lexer.pos}
+				return mods, &ParseError{p.lexer.input, "missing modifier value", p.lexer.pos}
 			}
 			mod := Modifier{Name: modifier, Relation: relation, Value: p.value}
 			p.next()
@@ -83,14 +89,14 @@ func (p *Parser) searchClause(ctx *context) (Clause, error) {
 			return node, err
 		}
 		if p.look != tokenRp {
-			return node, &ParseError{"missing )", p.lexer.pos}
+			return node, &ParseError{p.lexer.input, "missing )", p.lexer.pos}
 		}
 		p.next()
 		return node, nil
 	}
 	var node Clause
 	if !p.isSearchTerm() {
-		return node, &ParseError{"search term expected", p.lexer.pos}
+		return node, &ParseError{p.lexer.input, "search term expected", p.lexer.pos}
 	}
 	indexOrTerm := p.value
 	relPos := p.lexer.pos
@@ -109,7 +115,7 @@ func (p *Parser) searchClause(ctx *context) (Clause, error) {
 	sb.WriteString(indexOrTerm)
 	for p.look == tokenSimpleString || p.look == tokenPrefixName || p.look == tokenRelSym {
 		if p.Strict {
-			return node, &ParseError{"relation expected", relPos}
+			return node, &ParseError{p.lexer.input, "relation expected", relPos}
 		} else {
 			sb.WriteString(" " + p.value)
 			p.next()
@@ -160,7 +166,7 @@ func (p *Parser) cqlQuery(ctx *context) (Clause, error) {
 	for p.look == tokenRelOp && p.value == ">" {
 		p.next()
 		if p.look != tokenSimpleString {
-			return node, &ParseError{"term expected after >", p.lexer.pos}
+			return node, &ParseError{p.lexer.input, "term expected after >", p.lexer.pos}
 		}
 		var uri string
 		value := p.value
@@ -168,7 +174,7 @@ func (p *Parser) cqlQuery(ctx *context) (Clause, error) {
 		if p.look == tokenRelOp && p.value == "=" {
 			p.next()
 			if p.look != tokenSimpleString {
-				return node, &ParseError{"term expected after =", p.lexer.pos}
+				return node, &ParseError{p.lexer.input, "term expected after =", p.lexer.pos}
 			}
 			uri = p.value
 			subctx.prefixes = append(ctx.prefixes, value)
@@ -218,7 +224,7 @@ func (p *Parser) Parse(input string) (Query, error) {
 		query.SortSpec, err = p.sortKeys()
 	}
 	if p.look != tokenEos {
-		return query, &ParseError{"EOF expected", p.lexer.pos}
+		return query, &ParseError{p.lexer.input, "EOF expected", p.lexer.pos}
 	}
 	return query, err
 }
