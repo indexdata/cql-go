@@ -621,6 +621,38 @@ func TestMultiTermAndSymRelStrict(t *testing.T) {
 	if in == out {
 		t.Fatalf("expected:\n%s\nwas:\n%s", exp, out)
 	}
+	//bind prefix in main query
+	in = "> b = x a b.c d or a b.c d"
+	q, err = p.Parse(in)
+	if err != nil {
+		t.Fatalf("parse error: %s", err)
+	}
+	out = q.String()
+	exp = "> b = x a b.c d or a b.c d"
+	if exp != out {
+		t.Fatalf("expected not equals: %s, %s", exp, out)
+	}
+	//bound prefix in subquery
+	in = "a or (> b = x a b.c d)"
+	q, err = p.Parse(in)
+	if err != nil {
+		t.Fatalf("parse error: %s", err)
+	}
+	out = q.String()
+	exp = "a or (> b = x a b.c d)"
+	if exp != out {
+		t.Fatalf("expected not equals: %s, %s", exp, out)
+	}
+	//bind prefix in sub query only
+	in = "a b.c d or (> b = x a b.c d)"
+	q, err = p.Parse(in)
+	if err == nil || err.Error() != "EOF expected near pos 6" {
+		t.Fatalf("expected parse error, was: %s", err)
+	}
+	out = q.String()
+	if in == out {
+		t.Fatalf("expected not equals: %s, %s", exp, out)
+	}
 }
 
 func TestMultiTermAndSymRel(t *testing.T) {
@@ -688,6 +720,18 @@ func TestMultiTermAndSymRel(t *testing.T) {
 	if in != out {
 		t.Fatalf("expected not equals: %s, %s", in, out)
 	}
+	//bound prefix in subquery only
+	in = "a b.c d or (> b = x a b.c d)"
+	q, err = p.Parse(in)
+	if err != nil {
+		t.Fatalf("parse error: %s", err)
+	}
+	out = q.String()
+	exp = "\"a b.c d\" or (> b = x a b.c d)"
+	if exp != out {
+		t.Fatalf("expected not equals: %s, %s", exp, out)
+	}
+	//built-in relation
 	in = "a within d"
 	q, err = p.Parse(in)
 	if err != nil {

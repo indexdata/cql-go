@@ -16,17 +16,17 @@ func (e *ParseError) Error() string {
 }
 
 type Parser struct {
-	Strict   bool //if true: multi term values are not allowed
-	look     token
-	value    string
-	lexer    lexer
-	prefixes []string
+	Strict bool //if true: multi term values are not allowed
+	look   token
+	value  string
+	lexer  lexer
 }
 
 type context struct {
 	index         string
 	relation      Relation
 	relation_mods []Modifier
+	prefixes      []string
 }
 
 func (p *Parser) next() {
@@ -44,9 +44,9 @@ func (p *Parser) isSearchTerm() bool {
 		p.look == tokenRelSym
 }
 
-func (p *Parser) isRelation() bool {
+func (p *Parser) isRelation(prefixes []string) bool {
 	return p.look == tokenRelOp || p.look == tokenRelSym ||
-		(p.look == tokenPrefixName && slices.Contains(p.prefixes, strings.Split(p.value, ".")[0]))
+		(p.look == tokenPrefixName && slices.Contains(prefixes, strings.Split(p.value, ".")[0]))
 }
 
 func (p *Parser) modifiers() ([]Modifier, error) {
@@ -94,14 +94,14 @@ func (p *Parser) searchClause(ctx *context) (Clause, error) {
 	}
 	indexOrTerm := p.value
 	p.next()
-	if p.isRelation() {
+	if p.isRelation(ctx.prefixes) {
 		relation := Relation(p.value)
 		p.next()
 		mods, err := p.modifiers()
 		if err != nil {
 			return node, err
 		}
-		ctx := context{index: indexOrTerm, relation: relation, relation_mods: mods}
+		ctx := context{index: indexOrTerm, relation: relation, relation_mods: mods, prefixes: ctx.prefixes}
 		return p.searchClause(&ctx)
 	}
 	var sb strings.Builder
@@ -154,6 +154,7 @@ func (p *Parser) scopedClause(ctx *context) (Clause, error) {
 func (p *Parser) cqlQuery(ctx *context) (Clause, error) {
 	var prefixes []Prefix
 	var node Clause
+	subctx := *ctx
 	for p.look == tokenRelOp && p.value == ">" {
 		p.next()
 		if p.look != tokenSimpleString {
@@ -168,16 +169,16 @@ func (p *Parser) cqlQuery(ctx *context) (Clause, error) {
 				return node, &ParseError{"term expected after =", p.lexer.pos}
 			}
 			uri = p.value
+			subctx.prefixes = append(ctx.prefixes, value)
 			p.next()
 		} else {
 			uri = value
 			value = ""
 		}
-		p.prefixes = append(p.prefixes, value)
 		prefix := Prefix{Prefix: value, Uri: uri}
 		prefixes = append(prefixes, prefix)
 	}
-	node, err := p.scopedClause(ctx)
+	node, err := p.scopedClause(&subctx)
 	node.PrefixMap = prefixes
 	return node, err
 }
@@ -199,11 +200,10 @@ func (p *Parser) sortKeys() ([]Sort, error) {
 }
 
 func (p *Parser) Parse(input string) (Query, error) {
-	p.prefixes = []string{"cql"}
 	p.lexer.init(input)
 	p.look, p.value = p.lexer.lex()
 
-	ctx := context{index: "cql.serverChoice", relation: "="}
+	ctx := context{index: "cql.serverChoice", relation: "=", prefixes: []string{"cql"}}
 	var query Query
 
 	node, err := p.cqlQuery(&ctx)
