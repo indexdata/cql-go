@@ -93,6 +93,7 @@ func (p *Parser) searchClause(ctx *context) (Clause, error) {
 		return node, &ParseError{"search term expected", p.lexer.pos}
 	}
 	indexOrTerm := p.value
+	relPos := p.lexer.pos
 	p.next()
 	if p.isRelation(ctx.prefixes) {
 		relation := Relation(p.value)
@@ -105,10 +106,11 @@ func (p *Parser) searchClause(ctx *context) (Clause, error) {
 		return p.searchClause(&ctx)
 	}
 	var sb strings.Builder
-
 	sb.WriteString(indexOrTerm)
-	if !p.Strict {
-		for p.look == tokenSimpleString || p.look == tokenPrefixName || p.look == tokenRelSym {
+	for p.look == tokenSimpleString || p.look == tokenPrefixName || p.look == tokenRelSym {
+		if p.Strict {
+			return node, &ParseError{"relation expected", relPos}
+		} else {
 			sb.WriteString(" " + p.value)
 			p.next()
 		}
