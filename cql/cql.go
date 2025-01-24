@@ -127,16 +127,22 @@ type Clause struct {
 }
 
 func (c *Clause) write(sb *strings.Builder, brackets bool) {
+	if len(c.PrefixMap) > 0 && brackets {
+		sb.WriteString("(")
+	}
 	for _, p := range c.PrefixMap {
 		p.write(sb)
 		sb.WriteString(" ")
 	}
 	if c.SearchClause != nil {
 		c.SearchClause.write(sb)
+		if len(c.PrefixMap) > 0 && brackets {
+			sb.WriteString(")")
+		}
 		return
 	}
 	if c.BoolClause != nil {
-		if brackets {
+		if len(c.PrefixMap) == 0 && brackets {
 			sb.WriteString("(")
 		}
 		c.BoolClause.write(sb)
@@ -150,6 +156,9 @@ func (c *Clause) write(sb *strings.Builder, brackets bool) {
 	sb.WriteString(string(EQ))
 	sb.WriteString(" ")
 	sb.WriteString("1")
+	if len(c.PrefixMap) > 0 && brackets {
+		sb.WriteString(")")
+	}
 }
 
 func (c *Clause) String() string {

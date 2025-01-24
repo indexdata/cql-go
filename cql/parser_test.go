@@ -572,7 +572,7 @@ func TestMultiTermAndSymRelStrict(t *testing.T) {
 	}
 	in = "a b.c"
 	q, err = p.Parse(in)
-	if err == nil || err.Error() != "search term expected near pos 5" {
+	if err == nil || err.Error() != "EOF expected near pos 5" {
 		t.Fatalf("expected parse error but was: %v", err)
 	}
 	out = q.String()
@@ -581,11 +581,11 @@ func TestMultiTermAndSymRelStrict(t *testing.T) {
 	}
 	in = "a b.c d"
 	q, err = p.Parse(in)
-	if err != nil {
-		t.Fatalf("parse error: %s", err)
+	if err == nil || err.Error() != "EOF expected near pos 6" {
+		t.Fatalf("expected parse error but was: %v", err)
 	}
 	out = q.String()
-	if in != out {
+	if in == out {
 		t.Fatalf("expected:\n%s\nwas:\n%s", in, out)
 	}
 	in = "a within d"
@@ -611,6 +611,48 @@ func TestMultiTermAndSymRelStrict(t *testing.T) {
 	if err == nil || err.Error() != "EOF expected near pos 4" {
 		t.Fatalf("expected parse error but was: %v", err)
 	}
+	//do not mistake terms for relation
+	in = "1 2.5 6"
+	q, err = p.Parse(in)
+	if err == nil || err.Error() != "EOF expected near pos 6" {
+		t.Fatalf("expected parse error: %s", err)
+	}
+	out = q.String()
+	if in == out {
+		t.Fatalf("expected:\n%s\nwas:\n%s", exp, out)
+	}
+	//bind prefix in main query
+	in = "> b = x a b.c d or a b.c d"
+	q, err = p.Parse(in)
+	if err != nil {
+		t.Fatalf("parse error: %s", err)
+	}
+	out = q.String()
+	exp = "> b = x a b.c d or a b.c d"
+	if exp != out {
+		t.Fatalf("expected not equals: %s, %s", exp, out)
+	}
+	//bound prefix in subquery
+	in = "a or (> b = x a b.c d)"
+	q, err = p.Parse(in)
+	if err != nil {
+		t.Fatalf("parse error: %s", err)
+	}
+	out = q.String()
+	exp = "a or (> b = x a b.c d)"
+	if exp != out {
+		t.Fatalf("expected not equals: %s, %s", exp, out)
+	}
+	//bind prefix in sub query only
+	in = "a b.c d or (> b = x a b.c d)"
+	q, err = p.Parse(in)
+	if err == nil || err.Error() != "EOF expected near pos 6" {
+		t.Fatalf("expected parse error, was: %s", err)
+	}
+	out = q.String()
+	if in == out {
+		t.Fatalf("expected not equals: %s, %s", exp, out)
+	}
 }
 
 func TestMultiTermAndSymRel(t *testing.T) {
@@ -635,24 +677,61 @@ func TestMultiTermAndSymRel(t *testing.T) {
 	if exp != out {
 		t.Fatalf("Expected: %s, got %s", exp, out)
 	}
+	//unbound prefix is just a term
 	in = "a b.c"
 	q, err = p.Parse(in)
-	if err == nil || err.Error() != "search term expected near pos 5" {
+	if err != nil {
+		t.Fatalf("parse error but was: %v", err)
+	}
+	out = q.String()
+	exp = "\"a b.c\""
+	if exp != out {
+		t.Fatalf("expected not equals: %s, %s", exp, out)
+	}
+	//bound prefixes are relations
+	in = "> b = x a b.c"
+	q, err = p.Parse(in)
+	if err == nil || err.Error() != "search term expected near pos 13" {
 		t.Fatalf("expected parse error but was: %v", err)
 	}
 	out = q.String()
-	if in == out {
-		t.Fatalf("expected not equals: %s, %s", in, out)
+	nexp := "\"a b.c\""
+	if nexp == out {
+		t.Fatalf("expected not equals: %s, %s", exp, out)
 	}
+	//unbound prefix
 	in = "a b.c d"
 	q, err = p.Parse(in)
 	if err != nil {
 		t.Fatalf("parse error: %s", err)
 	}
 	out = q.String()
-	if in != out {
-		t.Fatalf("expected:\n%s\nwas:\n%s", in, out)
+	exp = "\"a b.c d\""
+	if exp != out {
+		t.Fatalf("expected not equals: %s, %s", exp, out)
 	}
+	//bound prefix
+	in = "> b = x a b.c d"
+	q, err = p.Parse(in)
+	if err != nil {
+		t.Fatalf("parse error: %s", err)
+	}
+	out = q.String()
+	if in != out {
+		t.Fatalf("expected not equals: %s, %s", in, out)
+	}
+	//bound prefix in subquery only
+	in = "a b.c d or (> b = x a b.c d)"
+	q, err = p.Parse(in)
+	if err != nil {
+		t.Fatalf("parse error: %s", err)
+	}
+	out = q.String()
+	exp = "\"a b.c d\" or (> b = x a b.c d)"
+	if exp != out {
+		t.Fatalf("expected not equals: %s, %s", exp, out)
+	}
+	//built-in relation
 	in = "a within d"
 	q, err = p.Parse(in)
 	if err != nil {
@@ -679,6 +758,17 @@ func TestMultiTermAndSymRel(t *testing.T) {
 	}
 	out = q.String()
 	exp = "\"a b adj adj\""
+	if exp != out {
+		t.Fatalf("expected:\n%s\nwas:\n%s", exp, out)
+	}
+	//do not mistake terms for relation
+	in = "1 2.5 6"
+	q, err = p.Parse(in)
+	if err != nil {
+		t.Fatalf("parse error: %s", err)
+	}
+	out = q.String()
+	exp = "\"1 2.5 6\""
 	if exp != out {
 		t.Fatalf("expected:\n%s\nwas:\n%s", exp, out)
 	}
