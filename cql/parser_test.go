@@ -554,7 +554,7 @@ func TestMultiTermAndSymRelStrict(t *testing.T) {
 	}
 	in = "a b"
 	q, err = p.Parse(in)
-	if err == nil || err.Error() != "EOF expected near pos 3" {
+	if err == nil || err.Error() != "relation expected near pos 2" {
 		t.Fatalf("expected parse error but was: %v", err)
 	}
 	out = q.String()
@@ -563,7 +563,7 @@ func TestMultiTermAndSymRelStrict(t *testing.T) {
 	}
 	in = "a b c"
 	q, err = p.Parse(in)
-	if err == nil || err.Error() != "EOF expected near pos 4" {
+	if err == nil || err.Error() != "relation expected near pos 2" {
 		t.Fatalf("expected parse error but was: %v", err)
 	}
 	out = q.String()
@@ -572,7 +572,7 @@ func TestMultiTermAndSymRelStrict(t *testing.T) {
 	}
 	in = "a b.c"
 	q, err = p.Parse(in)
-	if err == nil || err.Error() != "EOF expected near pos 5" {
+	if err == nil || err.Error() != "relation expected near pos 2" {
 		t.Fatalf("expected parse error but was: %v", err)
 	}
 	out = q.String()
@@ -581,7 +581,7 @@ func TestMultiTermAndSymRelStrict(t *testing.T) {
 	}
 	in = "a b.c d"
 	q, err = p.Parse(in)
-	if err == nil || err.Error() != "EOF expected near pos 6" {
+	if err == nil || err.Error() != "relation expected near pos 2" {
 		t.Fatalf("expected parse error but was: %v", err)
 	}
 	out = q.String()
@@ -599,7 +599,7 @@ func TestMultiTermAndSymRelStrict(t *testing.T) {
 	}
 	in = "a b adj"
 	q, err = p.Parse(in)
-	if err == nil || err.Error() != "EOF expected near pos 4" {
+	if err == nil || err.Error() != "relation expected near pos 2" {
 		t.Fatalf("expected parse error but was: %v", err)
 	}
 	out = q.String()
@@ -608,13 +608,13 @@ func TestMultiTermAndSymRelStrict(t *testing.T) {
 	}
 	in = "a b adj c"
 	q, err = p.Parse(in)
-	if err == nil || err.Error() != "EOF expected near pos 4" {
+	if err == nil || err.Error() != "relation expected near pos 2" {
 		t.Fatalf("expected parse error but was: %v", err)
 	}
 	//do not mistake terms for relation
 	in = "1 2.5 6"
 	q, err = p.Parse(in)
-	if err == nil || err.Error() != "EOF expected near pos 6" {
+	if err == nil || err.Error() != "relation expected near pos 2" {
 		t.Fatalf("expected parse error: %s", err)
 	}
 	out = q.String()
@@ -646,7 +646,7 @@ func TestMultiTermAndSymRelStrict(t *testing.T) {
 	//bind prefix in sub query only
 	in = "a b.c d or (> b = x a b.c d)"
 	q, err = p.Parse(in)
-	if err == nil || err.Error() != "EOF expected near pos 6" {
+	if err == nil || err.Error() != "relation expected near pos 2" {
 		t.Fatalf("expected parse error, was: %s", err)
 	}
 	out = q.String()
