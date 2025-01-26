@@ -33,6 +33,7 @@ type context struct {
 	relation      Relation
 	relation_mods []Modifier
 	prefixes      []string
+	custom        bool
 }
 
 func (p *Parser) next() {
@@ -50,9 +51,10 @@ func (p *Parser) isSearchTerm() bool {
 		p.look == tokenRelSym
 }
 
-func (p *Parser) isRelation(prefixes []string) bool {
+func (p *Parser) isRelation(prefixes []string, custom bool) bool {
 	return p.look == tokenRelOp || p.look == tokenRelSym ||
-		(p.look == tokenPrefixName && slices.Contains(prefixes, strings.Split(p.value, ".")[0]))
+		(p.look == tokenPrefixName && slices.Contains(prefixes, strings.Split(p.value, ".")[0])) ||
+		(p.look == tokenSimpleString && custom)
 }
 
 func (p *Parser) modifiers() ([]Modifier, error) {
@@ -101,14 +103,14 @@ func (p *Parser) searchClause(ctx *context) (Clause, error) {
 	indexOrTerm := p.value
 	relPos := p.lexer.pos
 	p.next()
-	if p.isRelation(ctx.prefixes) {
+	if p.isRelation(ctx.prefixes, ctx.custom) {
 		relation := Relation(p.value)
 		p.next()
 		mods, err := p.modifiers()
 		if err != nil {
 			return node, err
 		}
-		ctx := context{index: indexOrTerm, relation: relation, relation_mods: mods, prefixes: ctx.prefixes}
+		ctx := context{index: indexOrTerm, relation: relation, relation_mods: mods, prefixes: ctx.prefixes, custom: ctx.custom}
 		return p.searchClause(&ctx)
 	}
 	var sb strings.Builder
@@ -180,6 +182,7 @@ func (p *Parser) cqlQuery(ctx *context) (Clause, error) {
 			subctx.prefixes = append(ctx.prefixes, value)
 			p.next()
 		} else {
+			subctx.custom = true
 			uri = value
 			value = ""
 		}
