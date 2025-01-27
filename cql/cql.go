@@ -47,6 +47,36 @@ const (
 	ResultSetId  CqlIndex = "cql.resultSetId"
 )
 
+// CQL built-in modifiers.
+type CqlModifier string
+
+const (
+	Stem           CqlModifier = "stem"           //relation/sort, apply stemming to terms
+	Relevant       CqlModifier = "relevant"       //relation/sort, apply relevancy matching
+	Phonetic       CqlModifier = "phonetic"       //relation/sort, match words sounding like term
+	Fuzzy          CqlModifier = "fuzzy"          //relation/sort, fuzzy matching
+	Partial        CqlModifier = "partial"        //relation/sort, used with `within`/`encloses`
+	IgnoreCase     CqlModifier = "ignoreCase"     //relation/sort, match case-insensitive
+	RespectCase    CqlModifier = "respectCase"    //relation/sort, match case-sensitive
+	IgnoreAccents  CqlModifier = "ignoreAccents"  //relation/sort, match w/o diacritics
+	RespectAccents CqlModifier = "respectAccents" //relation/sort, match with diacritics
+	Locale         CqlModifier = "locale"         //relation/sort, set locale, e.g `locale=da_DK`
+	Word           CqlModifier = "word"           //relation/sort, break term into words
+	String         CqlModifier = "string"         //relation/sort, treat term as a string
+	IsoDate        CqlModifier = "isoDate"        //relation/sort, term is an ISO date, e.g `2000-10-31T01:30:00.000-05:00`
+	Number         CqlModifier = "number"         //relation/sort, term is a number
+	Uri            CqlModifier = "uri"            //relation/sort, term is a URI
+	Oid            CqlModifier = "oid"            //relation/sort, terms is a ISO Object Identifier (OID), e.g `1.2.840.10003.3.1`
+	Masked         CqlModifier = "masked"         //relation, on by default, * - zero/more chars, ? - single char, ^ - word anchor, \ - escape char, e.g `dc.title adj "*fish food*``
+	Unmasked       CqlModifier = "unmasked"       //relation, disable masking
+	Substring      CqlModifier = "substring"      //relation, match range of chars, e.g `marc.008 =/substring="1:6" 920102`
+	Regexp         CqlModifier = "regexp"         //relation, term is a regular expression
+	Distance       CqlModifier = "distance"       //proximity, distance expression e.g `cat prox/distance>2 hat`
+	Unit           CqlModifier = "unit"           //proximity, unit for distance, one of paragraph, sentence, word (default), element
+	Unordered      CqlModifier = "unordered"      //proximity, order of terms is unimportant
+	Ordered        CqlModifier = "ordered"        //proximity, order of terms is important
+)
+
 // Represents the top-level CQL query.
 // The `Clause“ field should be provided upon initialization.
 // the `SortSpec` field is optional.
