@@ -14,7 +14,7 @@ If multiple terms are provided in a query, they must be quoted:
 
 `(index relation) "term1 term2"`
 
-To remain compatible with existing implementations like `CQL-java` this parser relaxes this requirement and allows
+To remain compatible with existing implementations, like `yaz` or `CQL-java`, this parser relaxes this requirement and allows
 for providing multiple unquoted terms in a query:
 
 `(index relation) term1 term2`
@@ -25,10 +25,13 @@ To allow for multiple terms in a query, the parser disambiguates between terms a
 by assuming that a relation is either:
 
 1. a symbolic relation: `=`, `==`, `<>`, `<` , `<=`, `>`, `>=`
-2. a built-in named relation from the default context set: `adj`, `any`, `all`, `exact`, `encloses`, `within`
-3. a custom prefixed relation for which a prefix is declared, e.g: `> dc = "http://deepcustard.org/" index dc.relation term`
-   Note that, unlike CQL-Java, terms that contain a `.` are not be considered relations unless the query includes a prefix assignment.
-4. a custom relation if a custom default context set is declared, e.g: `> "http://deepcustard.org/" index relation term`
-   Note that, effectively, any term is considered a relation when a custom default context is declared.
+2. a built-in named relation from the default context set:\
+   `adj`, `any`, `all`, `exact`, `encloses`, `within`
+4. a custom prefixed relation for which a prefix is declared, e.g:\
+   `> dc = "http://deepcustard.org/" index dc.relation term`\
+   Note that, unlike yaz or CQL-Java, terms that simply contain a `.` are not be considered relations unless the query includes a prefix declaration.
+5. a custom relation, if a custom default context set is declared, e.g:\
+   `> "http://deepcustard.org/" index relation term`\
+   Note that, effectively, any term on the second position is considered a relation when a custom default context is declared.
 
 These rules are applied in both the non-strict (default) and strict parsing modes.
