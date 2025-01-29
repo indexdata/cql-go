@@ -21,11 +21,7 @@ func main() {
 		p.Strict = strict
 		query, err := p.Parse(arg)
 		if err != nil {
-			if parseErr, ok := err.(*cql.ParseError); ok {
-				fmt.Fprintf(os.Stderr, "Parse failed, %s: %s\n", parseErr, parseErr.Marked())
-			} else {
-				fmt.Fprintln(os.Stderr, "Parse failed,", err)
-			}
+			fmt.Fprintln(os.Stderr, "ERROR", err)
 			os.Exit(1)
 		}
 		switch outFmt {

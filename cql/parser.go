@@ -6,23 +6,43 @@ import (
 	"strings"
 )
 
+const combiningTildeBelow = string('\u0330')
+
+// Indicates query parsing error
 type ParseError struct {
 	query   string
 	message string
 	pos     int
 }
 
+// Formats error for display
 func (e *ParseError) Error() string {
-	return fmt.Sprintf("%s near pos %d", e.message, e.pos)
+	return fmt.Sprintf("%s at position %d: %s", e.message, e.pos, e.Marked())
 }
 
-// Returns the query with the error position marked
+// Raw parser error message
+func (e *ParseError) Message() string {
+	return e.message
+}
+
+// Error position in the query
+func (e *ParseError) Pos() int {
+	return e.pos
+}
+
+// Query that caused the error
+func (e *ParseError) Query() string {
+	return e.query
+}
+
+// Query with the error position marked
 func (e *ParseError) Marked() string {
-	return e.query[:e.pos] + string('\u032D') + e.query[e.pos:]
+	return e.query[:e.pos] + combiningTildeBelow + e.query[e.pos:]
 }
 
+// CQL parser, non-strict by default
 type Parser struct {
-	Strict bool //if true: multi term values are not allowed
+	Strict bool //if true, multi term values, e.g. `a b c` are not allowed
 	look   token
 	value  string
 	lexer  lexer
@@ -168,7 +188,7 @@ func (p *Parser) cqlQuery(ctx *context) (Clause, error) {
 	for p.look == tokenRelOp && p.value == ">" {
 		p.next()
 		if p.look != tokenSimpleString {
-			return node, &ParseError{p.lexer.input, "term expected after >", p.lexer.pos}
+			return node, &ParseError{p.lexer.input, "prefix or uri expected", p.lexer.pos}
 		}
 		var uri string
 		value := p.value
@@ -176,7 +196,7 @@ func (p *Parser) cqlQuery(ctx *context) (Clause, error) {
 		if p.look == tokenRelOp && p.value == "=" {
 			p.next()
 			if p.look != tokenSimpleString {
-				return node, &ParseError{p.lexer.input, "term expected after =", p.lexer.pos}
+				return node, &ParseError{p.lexer.input, "uri expected", p.lexer.pos}
 			}
 			uri = p.value
 			subctx.prefixes = append(ctx.prefixes, value)
@@ -210,6 +230,7 @@ func (p *Parser) sortKeys() ([]Sort, error) {
 	return sortList, nil
 }
 
+// Parse input query string into a syntax tree or return an error.
 func (p *Parser) Parse(input string) (Query, error) {
 	p.lexer.init(input)
 	p.look, p.value = p.lexer.lex()

@@ -1,6 +1,7 @@
 package cql
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -426,85 +427,85 @@ func TestParseXml(t *testing.T) {
 			name:   "",
 			input:  "",
 			ok:     false,
-			expect: "search term expected near pos 0",
+			expect: "search term expected at position 0",
 		},
 		{
 			name:   "(",
 			input:  "(",
 			ok:     false,
-			expect: "search term expected near pos 1",
+			expect: "search term expected at position 1",
 		},
 		{
 			name:   "(a)",
 			input:  "(a",
 			ok:     false,
-			expect: "missing ) near pos 2",
+			expect: "missing ) at position 2",
 		},
 		{
 			name:   "(a))",
 			input:  "(a))",
 			ok:     false,
-			expect: "EOF expected near pos 4",
+			expect: "EOF expected at position 4",
 		},
 		{
 			name:   "dc.ti =",
 			input:  "dc.ti =",
 			ok:     false,
-			expect: "search term expected near pos 7",
+			expect: "search term expected at position 7",
 		},
 		{
 			name:   "a and",
 			input:  "a and",
 			ok:     false,
-			expect: "search term expected near pos 5",
+			expect: "search term expected at position 5",
 		},
 		{
 			name:   "a and /",
 			input:  "a and /",
 			ok:     false,
-			expect: "missing modifier key near pos 7",
+			expect: "missing modifier key at position 7",
 		},
 		{
 			name:   "a =/",
 			input:  "a =/",
 			ok:     false,
-			expect: "missing modifier key near pos 4",
+			expect: "missing modifier key at position 4",
 		},
 		{
 			name:   "a =/",
 			input:  "a =/b=",
 			ok:     false,
-			expect: "missing modifier value near pos 6",
+			expect: "missing modifier value at position 6",
 		},
 		{
 			name:   ">",
 			input:  ">",
 			ok:     false,
-			expect: "term expected after > near pos 1",
+			expect: "prefix or uri expected at position 1",
 		},
 		{
 			name:   ">dc=()",
 			input:  ">dc=()",
 			ok:     false,
-			expect: "term expected after = near pos 6",
+			expect: "uri expected at position 6",
 		},
 		{
 			name:   ">dc=uri",
 			input:  ">dc=uri",
 			ok:     false,
-			expect: "search term expected near pos 7",
+			expect: "search term expected at position 7",
 		},
 		{
 			name:   "a sortby year/",
 			input:  "a sortby year/",
 			ok:     false,
-			expect: "missing modifier key near pos 14",
+			expect: "missing modifier key at position 14",
 		},
 		{
 			name:   "bad rune",
 			input:  string([]byte{65, 192, 32, 65}),
 			ok:     false,
-			expect: "EOF expected near pos 3",
+			expect: "EOF expected at position 3",
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
@@ -522,7 +523,7 @@ func TestParseXml(t *testing.T) {
 				if err == nil {
 					t.Fatalf("expected Failure for query %s", testcase.input)
 				}
-				if err.Error() != testcase.expect {
+				if !strings.HasPrefix(err.Error(), testcase.expect) {
 					t.Fatalf("Different error for query %s\nExpect:\n%s\nGot:\n%s", testcase.input, testcase.expect, err.Error())
 				}
 			}
@@ -554,7 +555,7 @@ func TestMultiTermAndSymRelStrict(t *testing.T) {
 	}
 	in = "a b"
 	q, err = p.Parse(in)
-	if err == nil || err.Error() != "relation expected near pos 2" {
+	if err == nil || !strings.HasPrefix(err.Error(), "relation expected at position 2") {
 		t.Fatalf("expected parse error but was: %v", err)
 	}
 	out = q.String()
@@ -563,7 +564,7 @@ func TestMultiTermAndSymRelStrict(t *testing.T) {
 	}
 	in = "a b c"
 	q, err = p.Parse(in)
-	if err == nil || err.Error() != "relation expected near pos 2" {
+	if err == nil || !strings.HasPrefix(err.Error(), "relation expected at position 2") {
 		t.Fatalf("expected parse error but was: %v", err)
 	}
 	out = q.String()
@@ -572,7 +573,7 @@ func TestMultiTermAndSymRelStrict(t *testing.T) {
 	}
 	in = "a b.c"
 	q, err = p.Parse(in)
-	if err == nil || err.Error() != "relation expected near pos 2" {
+	if err == nil || !strings.HasPrefix(err.Error(), "relation expected at position 2") {
 		t.Fatalf("expected parse error but was: %v", err)
 	}
 	out = q.String()
@@ -581,7 +582,7 @@ func TestMultiTermAndSymRelStrict(t *testing.T) {
 	}
 	in = "a b.c d"
 	q, err = p.Parse(in)
-	if err == nil || err.Error() != "relation expected near pos 2" {
+	if err == nil || !strings.HasPrefix(err.Error(), "relation expected at position 2") {
 		t.Fatalf("expected parse error but was: %v", err)
 	}
 	out = q.String()
@@ -599,7 +600,7 @@ func TestMultiTermAndSymRelStrict(t *testing.T) {
 	}
 	in = "a b adj"
 	q, err = p.Parse(in)
-	if err == nil || err.Error() != "relation expected near pos 2" {
+	if err == nil || !strings.HasPrefix(err.Error(), "relation expected at position 2") {
 		t.Fatalf("expected parse error but was: %v", err)
 	}
 	out = q.String()
@@ -608,13 +609,13 @@ func TestMultiTermAndSymRelStrict(t *testing.T) {
 	}
 	in = "a b adj c"
 	q, err = p.Parse(in)
-	if err == nil || err.Error() != "relation expected near pos 2" {
+	if err == nil || !strings.HasPrefix(err.Error(), "relation expected at position 2") {
 		t.Fatalf("expected parse error but was: %v", err)
 	}
 	//do not mistake terms for relation
 	in = "1 2.5 6"
 	q, err = p.Parse(in)
-	if err == nil || err.Error() != "relation expected near pos 2" {
+	if err == nil || !strings.HasPrefix(err.Error(), "relation expected at position 2") {
 		t.Fatalf("expected parse error: %s", err)
 	}
 	out = q.String()
@@ -646,7 +647,7 @@ func TestMultiTermAndSymRelStrict(t *testing.T) {
 	//bind prefix in sub query only
 	in = "a b.c d or (> b = x a b.c d)"
 	q, err = p.Parse(in)
-	if err == nil || err.Error() != "relation expected near pos 2" {
+	if err == nil || !strings.HasPrefix(err.Error(), "relation expected at position 2") {
 		t.Fatalf("expected parse error, was: %s", err)
 	}
 	out = q.String()
@@ -711,7 +712,7 @@ func TestMultiTermAndSymRel(t *testing.T) {
 	//bound prefixes are relations
 	in = "> b = x a b.c"
 	q, err = p.Parse(in)
-	if err == nil || err.Error() != "search term expected near pos 13" {
+	if err == nil || !strings.HasPrefix(err.Error(), "search term expected at position 13") {
 		t.Fatalf("expected parse error but was: %v", err)
 	}
 	out = q.String()
