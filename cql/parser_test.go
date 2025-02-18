@@ -829,6 +829,27 @@ func TestQueryString(t *testing.T) {
 	}
 }
 
+func TestParseError1(t *testing.T) {
+	e := ParseError{query: "id=", message: "m", pos: 3}
+	if e.Error() != "m at position 3: id=̰" { // on my screen the combining tilde is placed below following "
+		t.Fatalf("Was: \"%s\" ", e.Error())
+	}
+}
+
+func TestParseError2(t *testing.T) {
+	e := ParseError{query: "idx", message: "m", pos: 3}
+	if e.Error() != "m at position 3: idx̰" { // on my screen the combining tilde is shown under x
+		t.Fatalf("Was: \"%s\"", e.Error())
+	}
+}
+
+func TestParseError3(t *testing.T) {
+	e := ParseError{query: "id=", message: "m", pos: 2}
+	if e.Error() != "m at position 2: id̰=" { // under d which is really the 2nd character
+		t.Fatalf("Was: \"%s\"", e.Error())
+	}
+}
+
 func TestQueryBrackets(t *testing.T) {
 	in := "a = x and b = y or c = z"
 	var p Parser
