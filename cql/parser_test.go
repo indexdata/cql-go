@@ -831,6 +831,15 @@ func TestQueryString(t *testing.T) {
 
 func TestParseError1(t *testing.T) {
 	e := ParseError{query: "id=", message: "m", pos: 3}
+	if e.Message() != "m" {
+		t.Fatalf("Expected m. Was %s", e.Message())
+	}
+	if e.Pos() != 3 {
+		t.Fatalf("Expected 3. Was %d", e.Pos())
+	}
+	if e.Query() != "id=" {
+		t.Fatalf("Expected id=. Was %s", e.Query())
+	}
 	if e.Error() != "m at position 3: id=̰" { // on my screen the combining tilde is placed below following "
 		t.Fatalf("Was: \"%s\" ", e.Error())
 	}
