@@ -4,6 +4,32 @@ This module implements a parser for the `Contextual Query Language` (CQL) which 
 `Search/Retrieval via URL` (SRU) and `Search/Retrieval via Web Service` (SRW) family of protocols.
 See the [Library of Congress spec](https://www.loc.gov/standards/sru/cql/) for details.
 
+## Usage
+
+Running `make` or `go build -o . ./...` will compile the library and create the command-line tool `cql-cli`.
+
+The primary purpose of the library is to parse a CQL string and produce `cql.Query` which is a parse-tree really.
+
+
+```go
+import (
+   "fmt"
+   "github.com/indexdata/cql-go/cql"
+)
+
+func main() {
+   var parser cql.Parser
+   query, err := parser.Parse("title=hello")
+   if err != nil {
+      fmt.Fprintln(os.Stderr, "ERROR", err)
+   } else {
+      fmt.Println(&query)
+   }
+}
+```
+
+See the [cql-cli source](cmd/cql-cli/main.go) for a more complete example.
+
 ## Conformance
 
 The CQL specification requires that a query consist of a single search term with an optional index and relation:
@@ -14,8 +40,9 @@ If multiple terms are provided in a query, they must be quoted:
 
 `(index relation) "term1 term2"`
 
-To remain compatible with existing implementations, like `yaz` or `CQL-java`, this parser relaxes this requirement and allows
-for providing multiple unquoted terms in a query:
+To remain compatible with existing implementations, like
+[yaz](https://github.com/indexdata/yaz) or [CQL-java](https://github.com/indexdata/cql-java),
+this parser relaxes this requirement and allows for providing multiple unquoted terms in a query:
 
 `(index relation) term1 term2`
 
