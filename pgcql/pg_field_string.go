@@ -17,9 +17,8 @@ func (f *FieldString) GetColumn() string {
 	return f.column
 }
 
-func (f *FieldString) WithColumn(column string) Field {
+func (f *FieldString) SetColumn(column string) {
 	f.column = column
-	return f
 }
 
 func (f *FieldString) WithFullText(language string) Field {

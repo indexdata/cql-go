@@ -14,7 +14,7 @@ func (e *PgError) Error() string {
 
 type Field interface {
 	GetColumn() string
-	WithColumn(column string) Field
+	SetColumn(column string)
 	Generate(sc cql.SearchClause, queryArgumentIndex int) (string, []any, error)
 }
 

@@ -23,18 +23,15 @@ func TestBadSearchClause(t *testing.T) {
 func TestParsing(t *testing.T) {
 	def := &PgDefinition{}
 	title := &FieldString{}
-	title.WithExact()
-	title.WithColumn("Title")
+	title.WithExact().SetColumn("Title")
 
 	assert.Equal(t, title.GetColumn(), "Title", "GetColumn() should return the column name")
 
 	author := &FieldString{}
-	author.WithColumn("Author")
-	author.WithLikeOps()
+	author.WithLikeOps().SetColumn("Author")
 
 	serverChoice := &FieldString{}
-	serverChoice.WithExact()
-	serverChoice.WithColumn("T")
+	serverChoice.WithExact().SetColumn("T")
 
 	def.AddField("title", title).AddField("author", author).AddField("cql.serverChoice", serverChoice)
 

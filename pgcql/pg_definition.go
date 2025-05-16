@@ -7,6 +7,9 @@ type PgDefinition struct {
 }
 
 func (pg *PgDefinition) AddField(name string, field Field) Definition {
+	if field.GetColumn() == "" {
+		field.SetColumn(name)
+	}
 	if pg.fields == nil {
 		pg.fields = make(map[string]Field)
 	}
