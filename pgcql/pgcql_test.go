@@ -33,29 +33,56 @@ func TestParsing(t *testing.T) {
 	serverChoice := &FieldString{}
 	serverChoice.WithExact().SetColumn("T")
 
-	def.AddField("title", title).AddField("author", author).AddField("cql.serverChoice", serverChoice)
+	full := &FieldString{}
+	full.WithFullText("english")
+
+	def.AddField("title", title).AddField("author", author).AddField("cql.serverChoice", serverChoice).AddField("full", full)
 
 	for _, testcase := range []struct {
 		query        string
 		expected     string
-		expectedArgs []interface{}
+		expectedArgs []any
 	}{
-		{"abc", "T = $1", []interface{}{"abc"}},
-		{"\"\"", "T IS NOT NULL", []interface{}{}},
+		{"abc", "T = $1", []any{"abc"}},
+		{"\"\"", "T IS NOT NULL", []any{}},
 		{"au=2", "error: unknown field au", nil},
 		{"title>2", "error: unsupported relation >", nil},
-		{"title=2", "Title = $1", []interface{}{"2"}},
-		{"title<>2", "Title <> $1", []interface{}{"2"}},
-		{"a or b and c", "(T = $1 OR T = $2) AND T = $3", []interface{}{"a", "b", "c"}},
-		{"title = abc", "Title = $1", []interface{}{"abc"}},
-		{"author = \"test\"", "Author = $1", []interface{}{"test"}},
-		{"title = a AND author = b c", "Title = $1 AND Author = $2", []interface{}{"a", "b c"}},
-		{"title = 'a' OR author = 'b'", "Title = $1 OR Author = $2", []interface{}{"''a''", "''b''"}},
-		{"title = a NOT author = b", "Title = $1 AND NOT Author = $2", []interface{}{"a", "b"}},
-		{"a prox b", "error: unsupported operator prox", []interface{}{}},
-		{"a sortby title", "error: sorting not supported", []interface{}{}},
+		{"title=2", "Title = $1", []any{"2"}},
+		{"title<>2", "Title <> $1", []any{"2"}},
+		{"a or b and c", "(T = $1 OR T = $2) AND T = $3", []any{"a", "b", "c"}},
+		{"title = abc", "Title = $1", []any{"abc"}},
+		{"author = \"test\"", "Author = $1", []any{"test"}},
+		{"author <> \"test\"", "Author <> $1", []any{"test"}},
+		{"author = \"test*\"", "Author LIKE $1", []any{"test%"}},
+		{"author <> \"test*\"", "Author NOT LIKE $1", []any{"test%"}},
+		{"title = a AND author = b c", "Title = $1 AND Author = $2", []any{"a", "b c"}},
+		{"title = 'a' OR author = 'b'", "Title = $1 OR Author = $2", []any{"'a'", "'b'"}},
+		{"title = a NOT author = b", "Title = $1 AND NOT Author = $2", []any{"a", "b"}},
+		{"a prox b", "error: unsupported operator prox", []any{}},
+		{"a sortby title", "error: sorting not supported", []any{}},
 		{"au=2 or a", "error: unknown field au", nil},
 		{"a or au=2", "error: unknown field au", nil},
+		{"author=\"ab?%\"", "Author LIKE $1", []any{"ab_\\%"}},
+		{"author=\"ab*_\"", "Author LIKE $1", []any{"ab%\\_"}},
+		{"author=\"a^\"", "error: anchor op ^ unsupported", nil},
+		{"author=\"a*\\", "error: a CQL string must not end with a masking backslash", nil},
+		{"author=\"a*\\x\"", "error: a masking backslash in a CQL string must be followed by *, ?, ^, \" or \\", nil},
+		{"author=\"a*\\*\\\"\\?\\^\\\\", "Author LIKE $1", []any{"a%*\"?^\\\\"}},
+		{"author=\"a\\*\\\"\\?\\^\\\\", "Author = $1", []any{"a*\"?^\\"}},
+
+		{"title=\"a*\"", "error: masking op * unsupported", nil},
+		{"title=\"a?\"", "error: masking op ? unsupported", nil},
+		{"title=\"a^\"", "error: anchor op ^ unsupported", nil},
+		{"title=\"a\\*\"", "Title = $1", []any{"a*"}},
+		{"title=\"a\\?\"", "Title = $1", []any{"a?"}},
+		{"title=\"a\\^\"", "Title = $1", []any{"a^"}},
+		{"title=\"a\\", "error: a CQL string must not end with a masking backslash", nil},
+		{"title=\"a\\x\"", "error: a masking backslash in a CQL string must be followed by *, ?, ^, \" or \\", nil},
+		{"full = \"abc\"", "to_tsvector('english', full) @@ phraseto_tsquery('english', $1)", []any{"abc"}},
+		{"full adj \"abc\"", "to_tsvector('english', full) @@ phraseto_tsquery('english', $1)", []any{"abc"}},
+		{"full all \"abc\"", "to_tsvector('english', full) @@ plainto_tsquery('english', $1)", []any{"abc"}},
+		{"full=\"a*\"", "error: masking op * unsupported", nil},
+		{"full any x", "error: exact search not supported", nil},
 	} {
 		var parser cql.Parser
 		q, err := parser.Parse(testcase.query)

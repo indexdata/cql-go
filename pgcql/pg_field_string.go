@@ -64,8 +64,6 @@ func maskedExact(cqlTerm string) (string, error) {
 				return "", fmt.Errorf("anchor op ^ unsupported")
 			case '\\':
 				// Do nothing, just set backslash to true
-			case '\'':
-				pgTerm = append(pgTerm, '\'', '\'')
 			default:
 				pgTerm = append(pgTerm, c)
 			}
@@ -108,8 +106,6 @@ func maskedLike(cqlTerm string) (string, bool, error) {
 				// Do nothing, just set backslash to true
 			case '%', '_':
 				pgTerm = append(pgTerm, '\\', c)
-			case '\'':
-				pgTerm = append(pgTerm, '\'', '\'')
 			default:
 				pgTerm = append(pgTerm, c)
 			}
@@ -159,9 +155,8 @@ func (f *FieldString) Generate(sc cql.SearchClause, queryArgumentIndex int) (str
 		if err != nil {
 			return "", nil, err
 		}
-		// TODO.. add to arguments
-		sql := "to_tsvector('" + f.language + "', " + f.column + ") @@ " + pgfunc + "('" + f.language + "', '" + pgTerm + "')"
-		return sql, nil, nil
+		sql := "to_tsvector('" + f.language + "', " + f.column + ") @@ " + pgfunc + "('" + f.language + "', " + fmt.Sprintf("$%d", queryArgumentIndex) + ")"
+		return sql, []any{pgTerm}, nil
 	}
 	if !f.enableExact {
 		return "", nil, &PgError{message: "exact search not supported"}
@@ -176,7 +171,7 @@ func (f *FieldString) Generate(sc cql.SearchClause, queryArgumentIndex int) (str
 			if sc.Relation == cql.NE {
 				pgOp = "NOT LIKE"
 			}
-			return f.column + " " + pgOp + fmt.Sprintf(" $%d", queryArgumentIndex), []interface{}{pgTerm}, nil
+			return f.column + " " + pgOp + fmt.Sprintf(" $%d", queryArgumentIndex), []any{pgTerm}, nil
 		}
 	}
 	pgTerm, err := maskedExact(sc.Term)
@@ -187,5 +182,5 @@ func (f *FieldString) Generate(sc cql.SearchClause, queryArgumentIndex int) (str
 	if err != nil {
 		return "", nil, err
 	}
-	return f.column + " " + pgOp + fmt.Sprintf(" $%d", queryArgumentIndex), []interface{}{pgTerm}, nil
+	return f.column + " " + pgOp + fmt.Sprintf(" $%d", queryArgumentIndex), []any{pgTerm}, nil
 }
