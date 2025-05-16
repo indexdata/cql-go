@@ -15,7 +15,7 @@ type PgQuery struct {
 
 func (p *PgQuery) parse(q cql.Query, queryArgumentIndex int, def *PgDefinition) error {
 	p.def = def
-	p.arguments = make([]interface{}, 0)
+	p.arguments = make([]any, 0)
 	p.queryArgumentIndex = queryArgumentIndex
 	if q.SortSpec != nil {
 		return &PgError{message: "sorting not supported"}
