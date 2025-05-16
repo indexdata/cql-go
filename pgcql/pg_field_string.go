@@ -7,18 +7,10 @@ import (
 )
 
 type FieldString struct {
-	column      string
+	FieldCommon
 	language    string
 	enableLike  bool
 	enableExact bool
-}
-
-func (f *FieldString) GetColumn() string {
-	return f.column
-}
-
-func (f *FieldString) SetColumn(column string) {
-	f.column = column
 }
 
 func (f *FieldString) WithFullText(language string) Field {
@@ -125,17 +117,6 @@ func (f *FieldString) handleEmptyTerm(sc cql.SearchClause) string {
 	return ""
 }
 
-func unorderedRelation(sc cql.SearchClause) (string, error) {
-	switch sc.Relation {
-	case cql.EXACT, cql.EQ:
-		return "=", nil
-	case cql.NE:
-		return "<>", nil
-	default:
-		return "", fmt.Errorf("unsupported relation %s", sc.Relation)
-	}
-}
-
 func (f *FieldString) Generate(sc cql.SearchClause, queryArgumentIndex int) (string, []any, error) {
 	sql := f.handleEmptyTerm(sc)
 	if sql != "" {
@@ -178,7 +159,7 @@ func (f *FieldString) Generate(sc cql.SearchClause, queryArgumentIndex int) (str
 	if err != nil {
 		return "", nil, err
 	}
-	pgOp, err := unorderedRelation(sc)
+	pgOp, err := f.handleUnorderedRelation(sc)
 	if err != nil {
 		return "", nil, err
 	}

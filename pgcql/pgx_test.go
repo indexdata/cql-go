@@ -76,7 +76,7 @@ func TestPgx(t *testing.T) {
 
 		def.AddField("title", (&FieldString{}).WithExact())
 		def.AddField("author", (&FieldString{}).WithExact())
-		def.AddField("year", (&FieldString{}).WithExact())
+		def.AddField("year", (&FieldNumber{}))
 
 		var parser cql.Parser
 		for _, testcase := range []struct {
@@ -102,6 +102,11 @@ func TestPgx(t *testing.T) {
 			{"title = \"anonymous' list\"", []int{3}},
 			{"title = \"anonymous'' list\"", []int{}},
 			{"title = \"anonymous list\"", []int{}},
+			{"year <> 1984", []int{1, 3}},
+			{"year < 1984", []int{1}},
+			{"year <= 1984", []int{1, 2}},
+			{"year >= 1984", []int{2, 3}},
+			{"year > 1984", []int{3}},
 		} {
 			runQuery(t, parser, conn, ctx, def, testcase.query, testcase.expectedIds)
 		}
@@ -112,7 +117,7 @@ func TestPgx(t *testing.T) {
 
 		def.AddField("title", (&FieldString{}).WithLikeOps())
 		def.AddField("author", (&FieldString{}).WithLikeOps())
-		def.AddField("year", (&FieldString{}).WithLikeOps())
+		def.AddField("year", (&FieldNumber{}))
 
 		var parser cql.Parser
 		for _, testcase := range []struct {
@@ -132,7 +137,7 @@ func TestPgx(t *testing.T) {
 
 		def.AddField("title", (&FieldString{}).WithFullText("simple"))
 		def.AddField("author", (&FieldString{}).WithFullText(""))
-		def.AddField("year", (&FieldString{}).WithLikeOps())
+		def.AddField("year", (&FieldNumber{}))
 
 		var parser cql.Parser
 		for _, testcase := range []struct {

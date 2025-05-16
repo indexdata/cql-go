@@ -38,6 +38,9 @@ func TestParsing(t *testing.T) {
 
 	def.AddField("title", title).AddField("author", author).AddField("cql.serverChoice", serverChoice).AddField("full", full)
 
+	price := &FieldNumber{}
+	def.AddField("price", price)
+
 	for _, testcase := range []struct {
 		query        string
 		expected     string
@@ -48,6 +51,8 @@ func TestParsing(t *testing.T) {
 		{"au=2", "error: unknown field au", nil},
 		{"title>2", "error: unsupported relation >", nil},
 		{"title=2", "Title = $1", []any{"2"}},
+		{"title==2", "Title = $1", []any{"2"}},
+		{"title exact 2", "Title = $1", []any{"2"}},
 		{"title<>2", "Title <> $1", []any{"2"}},
 		{"a or b and c", "(T = $1 OR T = $2) AND T = $3", []any{"a", "b", "c"}},
 		{"title = abc", "Title = $1", []any{"abc"}},
@@ -83,6 +88,17 @@ func TestParsing(t *testing.T) {
 		{"full all \"abc\"", "to_tsvector('english', full) @@ plainto_tsquery('english', $1)", []any{"abc"}},
 		{"full=\"a*\"", "error: masking op * unsupported", nil},
 		{"full any x", "error: exact search not supported", nil},
+		{"price = 10", "price = $1", []any{10.0}},
+		{"price == 10", "price = $1", []any{10.0}},
+		{"price exact 10", "price = $1", []any{10.0}},
+		{"price > 10.95", "price > $1", []any{10.95}},
+		{"price < 10.95", "price < $1", []any{10.95}},
+		{"price >= 10.95", "price >= $1", []any{10.95}},
+		{"price < 10.95", "price < $1", []any{10.95}},
+		{"price <= 10.95", "price <= $1", []any{10.95}},
+		{"price <= beta", "error: invalid number beta", nil},
+		{"price all 10.95", "error: unsupported operator all", nil},
+		{"price = \"\"", "price IS NOT NULL", []any{}},
 	} {
 		var parser cql.Parser
 		q, err := parser.Parse(testcase.query)
