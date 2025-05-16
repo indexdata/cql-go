@@ -1,4 +1,4 @@
-.PHONY: all test coverage clean
+.PHONY: all test coverage lint clean
 
 all:
 	go build -o . ./...
@@ -9,6 +9,9 @@ test:
 coverage:
 	go test ./...  -coverprofile=cover.out
 	go tool cover -html=cover.out
+
+lint:
+	go run github.com/golangci/golangci-lint/cmd/golangci-lint@latest run
 
 clean:
 	rm -f cover.out
