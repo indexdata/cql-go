@@ -1,6 +1,7 @@
 package cql
 
 import (
+	"bytes"
 	"encoding/xml"
 	"io"
 )
@@ -152,4 +153,10 @@ func (xcql *Xcql) Write(query Query, tab int, w io.Writer) error {
 	xcql.toXmlSort(query, 1)
 	xcql.pr(0, "</xcql>\n")
 	return xcql.err
+}
+
+func (xcql *Xcql) MarshalIndent(query Query, tab int) ([]byte, error) {
+	buf := new(bytes.Buffer)
+	err := xcql.Write(query, tab, buf)
+	return buf.Bytes(), err
 }

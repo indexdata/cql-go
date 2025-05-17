@@ -1,7 +1,6 @@
 package cql
 
 import (
-	"bytes"
 	"errors"
 	"strings"
 	"testing"
@@ -535,12 +534,11 @@ func TestParseXml(t *testing.T) {
 					t.Fatalf("expected OK for query %s . Got error: %s", testcase.input, err)
 				}
 				var xcql Xcql
-				bytes := bytes.NewBuffer(nil)
-				err := xcql.Write(node, testcase.tab, bytes)
+				bytes, err := xcql.MarshalIndent(node, testcase.tab)
 				if err != nil {
 					t.Fatalf("error marshalling query %s: %s", testcase.input, err)
 				}
-				xml := bytes.String()
+				xml := string(bytes)
 				if xml != testcase.expect {
 					t.Fatalf("Different XML for query %s\nExpect:\n%s\nGot:\n%s", testcase.input, testcase.expect, xml)
 				}
