@@ -36,7 +36,11 @@ func main() {
 		case "struct":
 			fmt.Printf("%+v\n", query)
 		case "xcql":
-			fmt.Print((&cql.Xcql{}).Marshal(query, 2))
+			os.Stdout.WriteString("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
+			err := (&cql.Xcql{}).Write(query, 2, os.Stdout)
+			if err != nil {
+				fmt.Fprintln(os.Stderr, "ERROR", err)
+			}
 		default:
 			fmt.Fprintln(os.Stderr, "Unknown output format:", outFmt)
 			os.Exit(1)

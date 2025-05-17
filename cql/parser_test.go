@@ -1,6 +1,7 @@
 package cql
 
 import (
+	"errors"
 	"strings"
 	"testing"
 )
@@ -507,6 +508,24 @@ func TestParseXml(t *testing.T) {
 			ok:     false,
 			expect: "EOF expected at position 3",
 		},
+		{
+			name:  "invalid",
+			input: "\"\x05\"",
+			ok:    true,
+			expect: `<xcql xmlns="http://docs.oasis-open.org/ns/search-ws/xcql">
+<triple>
+<searchClause>
+<index>cql.serverChoice</index>
+<relation>
+<value>=</value>
+</relation>
+<term>` + "\xef\xbf\xbd" + // replacement character, #FFFD
+				`</term>
+</searchClause>
+</triple>
+</xcql>
+`,
+		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
 			node, err := p.Parse(testcase.input)
@@ -515,7 +534,11 @@ func TestParseXml(t *testing.T) {
 					t.Fatalf("expected OK for query %s . Got error: %s", testcase.input, err)
 				}
 				var xcql Xcql
-				xml := xcql.Marshal(node, testcase.tab)
+				bytes, err := xcql.MarshalIndent(node, testcase.tab)
+				if err != nil {
+					t.Fatalf("error marshalling query %s: %s", testcase.input, err)
+				}
+				xml := string(bytes)
 				if xml != testcase.expect {
 					t.Fatalf("Different XML for query %s\nExpect:\n%s\nGot:\n%s", testcase.input, testcase.expect, xml)
 				}
@@ -1053,5 +1076,30 @@ func TestBoolClauseString(t *testing.T) {
 	out = clause2.String()
 	if in != out {
 		t.Fatalf("expected:\n%s\nwas:\n%s", in, out)
+	}
+}
+
+type FailWriter struct{}
+
+func (f *FailWriter) Write(p []byte) (n int, err error) {
+	return 0, errors.New("write error")
+}
+
+func TestXcqlFailWriter(t *testing.T) {
+	var p Parser
+	query, err := p.Parse("a")
+	if err != nil {
+		t.Fatalf("parse error: %s", err)
+	}
+	var xcql Xcql
+	err = xcql.Write(query, 0, &FailWriter{})
+	if err == nil {
+		t.Fatalf("expected error but got nil")
+	}
+	xcql.err = nil
+	xcql.cdata("hello")
+	err = xcql.err
+	if err == nil {
+		t.Fatalf("expected error but got nil")
 	}
 }

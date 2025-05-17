@@ -1,40 +1,36 @@
 package cql
 
 import (
-	"strings"
-	"unicode/utf8"
+	"bytes"
+	"encoding/xml"
+	"io"
 )
 
 type Xcql struct {
-	sb  strings.Builder
+	w   io.Writer
+	err error
 	tab int
 }
 
 func (xcql *Xcql) cdata(msg string) {
-	pos := 0
-	for pos < len(msg) {
-		r, w := utf8.DecodeRuneInString(msg[pos:])
-		switch r {
-		case utf8.RuneError:
-			return
-		case '&':
-			xcql.sb.WriteString("&amp;")
-		case '<':
-			xcql.sb.WriteString("&lt;")
-		case '>':
-			xcql.sb.WriteString("&gt;")
-		default:
-			xcql.sb.WriteRune(r)
-		}
-		pos += w
+	err := xml.EscapeText(xcql.w, []byte(msg))
+	if err != nil && xcql.err == nil {
+		xcql.err = err
+	}
+}
+
+func (xcql *Xcql) write(msg string) {
+	_, err := xcql.w.Write([]byte(msg))
+	if err != nil && xcql.err == nil {
+		xcql.err = err
 	}
 }
 
 func (xcql *Xcql) pr(level int, msg string) {
 	for i := 0; i < level*xcql.tab; i++ {
-		xcql.sb.WriteString(" ")
+		xcql.write(" ")
 	}
-	xcql.sb.WriteString(msg)
+	xcql.write(msg)
 }
 
 func (xcql *Xcql) toXmlMod(modifiers []Modifier, level int) {
@@ -150,11 +146,17 @@ func (xcql *Xcql) toXmlSort(query Query, level int) {
 	}
 }
 
-func (xcql *Xcql) Marshal(query Query, tab int) string {
-	xcql.sb.Reset()
+func (xcql *Xcql) Write(query Query, tab int, w io.Writer) error {
+	xcql.w = w
 	xcql.tab = tab
 	xcql.pr(0, "<xcql xmlns=\"http://docs.oasis-open.org/ns/search-ws/xcql\">\n")
 	xcql.toXmlSort(query, 1)
 	xcql.pr(0, "</xcql>\n")
-	return xcql.sb.String()
+	return xcql.err
+}
+
+func (xcql *Xcql) MarshalIndent(query Query, tab int) ([]byte, error) {
+	buf := new(bytes.Buffer)
+	err := xcql.Write(query, tab, buf)
+	return buf.Bytes(), err
 }
