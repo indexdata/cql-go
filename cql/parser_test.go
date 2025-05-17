@@ -1067,6 +1067,14 @@ func TestBoolClauseString(t *testing.T) {
 	if in != out {
 		t.Fatalf("expected:\n%s\nwas:\n%s", in, out)
 	}
+	boolClause = BoolClause{Left: clause1}
+	boolClause.Right.PrefixMap = []Prefix{{Prefix: "dc", Uri: "http://deepcustard.org/"}}
+
+	in = "x and (> dc = \"http://deepcustard.org/\" cql.allRecords = 1)"
+	out = boolClause.String()
+	if in != out {
+		t.Fatalf("expected:\n%s\nwas:\n%s", in, out)
+	}
 	in = "x"
 	out = clause1.String()
 	if in != out {
