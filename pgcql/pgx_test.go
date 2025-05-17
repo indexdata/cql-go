@@ -13,7 +13,7 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
-func runQuery(t *testing.T, parser cql.Parser, conn *pgx.Conn, ctx context.Context, def *PgDefinition, query string, expectedIds []int) {
+func runQuery(t *testing.T, parser cql.Parser, conn *pgx.Conn, ctx context.Context, def Definition, query string, expectedIds []int) {
 	q, err := parser.Parse(query)
 	assert.NoErrorf(t, err, "failed to parse cql query '%s'", query)
 	res, err := def.Parse(q, 1)
@@ -72,7 +72,7 @@ func TestPgx(t *testing.T) {
 	rows.Close()
 
 	t.Run("exact ops", func(t *testing.T) {
-		def := &PgDefinition{}
+		def := NewPgDefinition()
 
 		def.AddField("title", (&FieldString{}).WithExact())
 		def.AddField("author", (&FieldString{}).WithExact())
@@ -113,7 +113,7 @@ func TestPgx(t *testing.T) {
 	})
 
 	t.Run("like ops", func(t *testing.T) {
-		def := &PgDefinition{}
+		def := NewPgDefinition()
 
 		def.AddField("title", (&FieldString{}).WithLikeOps())
 		def.AddField("author", (&FieldString{}).WithLikeOps())
@@ -133,7 +133,7 @@ func TestPgx(t *testing.T) {
 	})
 
 	t.Run("fulltext ops", func(t *testing.T) {
-		def := &PgDefinition{}
+		def := NewPgDefinition()
 
 		def.AddField("title", (&FieldString{}).WithFullText("simple"))
 		def.AddField("author", (&FieldString{}).WithFullText(""))
@@ -160,5 +160,4 @@ func TestPgx(t *testing.T) {
 
 	err = pgContainer.Terminate(ctx)
 	assert.NoError(t, err, "failed to stop db container")
-
 }

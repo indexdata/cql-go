@@ -12,7 +12,7 @@ import (
 func main() {
 	var serverChoiceColumn string
 	flag.StringVar(&serverChoiceColumn, "s", "text", "column for cql.serverChoice")
-	def := &pgcql.PgDefinition{}
+	def := pgcql.NewPgDefinition()
 	if serverChoiceColumn != "" {
 		serverChoice := &pgcql.FieldString{}
 		serverChoice.WithFullText("english").SetColumn(serverChoiceColumn)

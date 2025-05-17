@@ -6,6 +6,10 @@ type PgDefinition struct {
 	fields map[string]Field
 }
 
+func NewPgDefinition() Definition {
+	return &PgDefinition{}
+}
+
 func (pg *PgDefinition) AddField(name string, field Field) Definition {
 	if field.GetColumn() == "" {
 		field.SetColumn(name)

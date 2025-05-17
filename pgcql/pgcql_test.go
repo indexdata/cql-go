@@ -10,7 +10,7 @@ import (
 )
 
 func TestBadSearchClause(t *testing.T) {
-	def := &PgDefinition{}
+	def := NewPgDefinition()
 
 	assert.Nil(t, def.GetFieldType("foo"))
 
@@ -21,7 +21,7 @@ func TestBadSearchClause(t *testing.T) {
 }
 
 func TestParsing(t *testing.T) {
-	def := &PgDefinition{}
+	def := NewPgDefinition()
 	title := &FieldString{}
 	title.WithExact().SetColumn("Title")
 
