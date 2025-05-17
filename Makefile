@@ -15,4 +15,4 @@ lint:
 
 clean:
 	rm -f cover.out
-	rm -f cql-cli
+	rm -f cql-cli pgcql-cli
