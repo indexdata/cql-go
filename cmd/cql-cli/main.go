@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"encoding/xml"
 	"flag"
@@ -37,12 +36,10 @@ func main() {
 		case "struct":
 			fmt.Printf("%+v\n", query)
 		case "xcql":
-			buf := bytes.NewBuffer(nil)
-			err := (&cql.Xcql{}).Write(query, 2, buf)
+			os.Stdout.WriteString("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
+			err := (&cql.Xcql{}).Write(query, 2, os.Stdout)
 			if err != nil {
 				fmt.Fprintln(os.Stderr, "ERROR", err)
-			} else {
-				fmt.Printf("%s\n", buf)
 			}
 		default:
 			fmt.Fprintln(os.Stderr, "Unknown output format:", outFmt)
