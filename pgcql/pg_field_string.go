@@ -13,7 +13,16 @@ type FieldString struct {
 	enableExact bool
 }
 
-func (f *FieldString) WithFullText(language string) Field {
+func NewFieldString() *FieldString {
+	return &FieldString{}
+}
+
+func (f *FieldString) WithColumn(column string) *FieldString {
+	f.column = column
+	return f
+}
+
+func (f *FieldString) WithFullText(language string) *FieldString {
 	if language == "" {
 		f.language = "simple"
 	} else {
@@ -22,13 +31,13 @@ func (f *FieldString) WithFullText(language string) Field {
 	return f
 }
 
-func (f *FieldString) WithLikeOps() Field {
+func (f *FieldString) WithLikeOps() *FieldString {
 	f.enableExact = true
 	f.enableLike = true
 	return f
 }
 
-func (f *FieldString) WithExact() Field {
+func (f *FieldString) WithExact() *FieldString {
 	f.enableExact = true
 	return f
 }

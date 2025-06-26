@@ -27,8 +27,7 @@ func TestParsing(t *testing.T) {
 
 	assert.Equal(t, title.GetColumn(), "Title", "GetColumn() should return the column name")
 
-	author := &FieldString{}
-	author.WithLikeOps().SetColumn("Author")
+	author := NewFieldString().WithLikeOps().WithColumn("Author")
 
 	serverChoice := &FieldString{}
 	serverChoice.WithExact().SetColumn("T")
