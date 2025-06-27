@@ -1,8 +1,6 @@
 package pgcql
 
 import (
-	"fmt"
-
 	"github.com/indexdata/cql-go/cql"
 )
 
@@ -24,7 +22,7 @@ func (f *FieldCommon) handleUnorderedRelation(sc cql.SearchClause) (string, erro
 	case cql.NE:
 		return "<>", nil
 	default:
-		return "", fmt.Errorf("unsupported relation %s", sc.Relation)
+		return "", &PgError{message: "unsupported relation " + string(sc.Relation)}
 	}
 }
 
@@ -35,7 +33,7 @@ func (f *FieldCommon) handleOrderedRelation(sc cql.SearchClause) (string, error)
 	case "=", "<>", ">", "<", "<=", ">=":
 		return string(sc.Relation), nil
 	default:
-		return "", &PgError{message: "unsupported operator " + string(sc.Relation)}
+		return "", &PgError{message: "unsupported relation " + string(sc.Relation)}
 	}
 }
 

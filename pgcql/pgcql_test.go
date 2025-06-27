@@ -27,8 +27,7 @@ func TestParsing(t *testing.T) {
 
 	assert.Equal(t, title.GetColumn(), "Title", "GetColumn() should return the column name")
 
-	author := &FieldString{}
-	author.WithLikeOps().SetColumn("Author")
+	author := NewFieldString().WithLikeOps().WithColumn("Author")
 
 	serverChoice := &FieldString{}
 	serverChoice.WithExact().SetColumn("T")
@@ -54,6 +53,8 @@ func TestParsing(t *testing.T) {
 		{"title==2", "Title = $1", []any{"2"}},
 		{"title exact 2", "Title = $1", []any{"2"}},
 		{"title<>2", "Title <> $1", []any{"2"}},
+		{"title any \"1 23 45\"", "Title IN($1, $2, $3)", []any{"1", "23", "45"}},
+		{"title any \"*\"", "error: masking op * unsupported", nil},
 		{"a or b and c", "(T = $1 OR T = $2) AND T = $3", []any{"a", "b", "c"}},
 		{"title = abc", "Title = $1", []any{"abc"}},
 		{"author = \"test\"", "Author = $1", []any{"test"}},
@@ -87,7 +88,8 @@ func TestParsing(t *testing.T) {
 		{"full adj \"abc\"", "to_tsvector('english', full) @@ phraseto_tsquery('english', $1)", []any{"abc"}},
 		{"full all \"abc\"", "to_tsvector('english', full) @@ plainto_tsquery('english', $1)", []any{"abc"}},
 		{"full=\"a*\"", "error: masking op * unsupported", nil},
-		{"full any x", "error: exact search not supported", nil},
+		{"full any x", "full IN($1)", []any{"x"}},
+		{"full > x", "error: unsupported relation >", nil},
 		{"price = 10", "price = $1", []any{10.0}},
 		{"price == 10", "price = $1", []any{10.0}},
 		{"price exact 10", "price = $1", []any{10.0}},
@@ -97,7 +99,7 @@ func TestParsing(t *testing.T) {
 		{"price < 10.95", "price < $1", []any{10.95}},
 		{"price <= 10.95", "price <= $1", []any{10.95}},
 		{"price <= beta", "error: invalid number beta", nil},
-		{"price all 10.95", "error: unsupported operator all", nil},
+		{"price all 10.95", "error: unsupported relation all", nil},
 		{"price = \"\"", "price IS NOT NULL", []any{}},
 	} {
 		var parser cql.Parser
