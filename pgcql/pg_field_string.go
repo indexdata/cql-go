@@ -12,6 +12,7 @@ type FieldString struct {
 	language    string
 	enableLike  bool
 	enableExact bool
+	enableSplit bool
 }
 
 func NewFieldString() *FieldString {
@@ -40,6 +41,11 @@ func (f *FieldString) WithLikeOps() *FieldString {
 
 func (f *FieldString) WithExact() *FieldString {
 	f.enableExact = true
+	return f
+}
+
+func (f *FieldString) WithSplit() *FieldString {
+	f.enableSplit = true
 	return f
 }
 
@@ -151,12 +157,16 @@ func (f *FieldString) generateFullText(sc cql.SearchClause, queryArgumentIndex i
 	return sql, []any{pgTerm}, nil
 }
 
-func (f *FieldString) generateAny(sc cql.SearchClause, queryArgumentIndex int) (string, []any, error) {
+func (f *FieldString) generateIn(sc cql.SearchClause, queryArgumentIndex int, not bool) (string, []any, error) {
 	pgTerms, err := maskedSplit(sc.Term, " ")
 	if err != nil {
 		return "", nil, err
 	}
-	sql := f.column + " IN("
+	sql := f.column
+	if not {
+		sql += " NOT"
+	}
+	sql += " IN("
 	anyTerms := make([]any, len(pgTerms))
 	for i, v := range pgTerms {
 		if i > 0 {
@@ -183,8 +193,13 @@ func (f *FieldString) Generate(sc cql.SearchClause, queryArgumentIndex int) (str
 			return f.generateFullText(sc, queryArgumentIndex, "plainto_tsquery")
 		}
 	}
-	if sc.Relation == cql.ANY {
-		return f.generateAny(sc, queryArgumentIndex)
+	if f.enableSplit {
+		if sc.Relation == cql.ANY {
+			return f.generateIn(sc, queryArgumentIndex, false)
+		}
+		if sc.Relation == cql.NE {
+			return f.generateIn(sc, queryArgumentIndex, true)
+		}
 	}
 	if !f.enableExact {
 		return "", nil, &PgError{message: "unsupported relation " + string(sc.Relation)}

@@ -29,13 +29,16 @@ func TestParsing(t *testing.T) {
 
 	author := NewFieldString().WithLikeOps().WithColumn("Author")
 
+	tag := &FieldString{}
+	tag.WithSplit().SetColumn("Tag")
+
 	serverChoice := &FieldString{}
 	serverChoice.WithExact().SetColumn("T")
 
 	full := &FieldString{}
 	full.WithFullText("english")
 
-	def.AddField("title", title).AddField("author", author).AddField("cql.serverChoice", serverChoice).AddField("full", full)
+	def.AddField("title", title).AddField("author", author).AddField("cql.serverChoice", serverChoice).AddField("full", full).AddField("tag", tag)
 
 	price := &FieldNumber{}
 	def.AddField("price", price)
@@ -53,8 +56,9 @@ func TestParsing(t *testing.T) {
 		{"title==2", "Title = $1", []any{"2"}},
 		{"title exact 2", "Title = $1", []any{"2"}},
 		{"title<>2", "Title <> $1", []any{"2"}},
-		{"title any \"1 23 45\"", "Title IN($1, $2, $3)", []any{"1", "23", "45"}},
-		{"title any \"*\"", "error: masking op * unsupported", nil},
+		{"tag any \"1 23 45\"", "Tag IN($1, $2, $3)", []any{"1", "23", "45"}},
+		{"tag <> \"1 23 45\"", "Tag NOT IN($1, $2, $3)", []any{"1", "23", "45"}},
+		{"tag any \"*\"", "error: masking op * unsupported", nil},
 		{"a or b and c", "(T = $1 OR T = $2) AND T = $3", []any{"a", "b", "c"}},
 		{"title = abc", "Title = $1", []any{"abc"}},
 		{"author = \"test\"", "Author = $1", []any{"test"}},
@@ -88,7 +92,7 @@ func TestParsing(t *testing.T) {
 		{"full adj \"abc\"", "to_tsvector('english', full) @@ phraseto_tsquery('english', $1)", []any{"abc"}},
 		{"full all \"abc\"", "to_tsvector('english', full) @@ plainto_tsquery('english', $1)", []any{"abc"}},
 		{"full=\"a*\"", "error: masking op * unsupported", nil},
-		{"full any x", "full IN($1)", []any{"x"}},
+		{"full any x", "error: unsupported relation any", nil},
 		{"full > x", "error: unsupported relation >", nil},
 		{"price = 10", "price = $1", []any{10.0}},
 		{"price == 10", "price = $1", []any{10.0}},

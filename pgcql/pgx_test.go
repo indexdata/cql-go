@@ -77,7 +77,7 @@ func TestPgx(t *testing.T) {
 		def.AddField("title", (&FieldString{}).WithExact())
 		def.AddField("author", (&FieldString{}).WithExact())
 		def.AddField("year", (&FieldNumber{}))
-		def.AddField("tag", (&FieldString{}))
+		def.AddField("tag", (&FieldString{}).WithSplit())
 
 		var parser cql.Parser
 		for _, testcase := range []struct {
@@ -109,6 +109,7 @@ func TestPgx(t *testing.T) {
 			{"year >= 1984", []int{2, 3}},
 			{"year > 1984", []int{3}},
 			{"tag any \"tag1\"", []int{1}},
+			{"tag <> \"tag1\"", []int{2}},
 			{"tag any \"tag1 tag2 tag3\"", []int{1, 2}},
 		} {
 			runQuery(t, parser, conn, ctx, def, testcase.query, testcase.expectedIds)
