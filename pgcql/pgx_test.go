@@ -54,16 +54,16 @@ func TestPgx(t *testing.T) {
 		err := conn.Close(ctx)
 		assert.NoError(t, err, "failed to close db connection")
 	}()
-	_, err = conn.Exec(ctx, "CREATE TABLE mytable (id SERIAL PRIMARY KEY, title TEXT, author TEXT, year INT)")
+	_, err = conn.Exec(ctx, "CREATE TABLE mytable (id SERIAL PRIMARY KEY, title TEXT, author TEXT, tag TEXT, year INT)")
 	assert.NoError(t, err, "failed to create mytable")
 
 	var rows pgx.Rows
 
-	rows, err = conn.Query(ctx, "INSERT INTO mytable (title, author, year) VALUES ($1, $2, $3)", "the art of computer programming, volume 1", "donald e. knuth", 1968)
+	rows, err = conn.Query(ctx, "INSERT INTO mytable (title, author, tag, year) VALUES ($1, $2, $3, $4)", "the art of computer programming, volume 1", "donald e. knuth", "tag1", 1968)
 	assert.NoError(t, err, "failed to insert data")
 	rows.Close()
 
-	rows, err = conn.Query(ctx, "INSERT INTO mytable (title, author, year) VALUES ($1, $2, $3)", "the TeXbook", "d. e. knuth", 1984)
+	rows, err = conn.Query(ctx, "INSERT INTO mytable (title, author, tag, year) VALUES ($1, $2, $3, $4)", "the TeXbook", "d. e. knuth", "tag2", 1984)
 	assert.NoError(t, err, "failed to insert data")
 	rows.Close()
 
@@ -77,6 +77,7 @@ func TestPgx(t *testing.T) {
 		def.AddField("title", (&FieldString{}).WithExact())
 		def.AddField("author", (&FieldString{}).WithExact())
 		def.AddField("year", (&FieldNumber{}))
+		def.AddField("tag", (&FieldString{}).WithSplit())
 
 		var parser cql.Parser
 		for _, testcase := range []struct {
@@ -107,6 +108,9 @@ func TestPgx(t *testing.T) {
 			{"year <= 1984", []int{1, 2}},
 			{"year >= 1984", []int{2, 3}},
 			{"year > 1984", []int{3}},
+			{"tag any \"tag1\"", []int{1}},
+			{"tag <> \"tag1\"", []int{2}},
+			{"tag any \"tag1 tag2 tag3\"", []int{1, 2}},
 		} {
 			runQuery(t, parser, conn, ctx, def, testcase.query, testcase.expectedIds)
 		}

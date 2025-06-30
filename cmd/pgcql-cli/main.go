@@ -14,8 +14,7 @@ func main() {
 	flag.StringVar(&serverChoiceColumn, "s", "text", "column for cql.serverChoice")
 	def := pgcql.NewPgDefinition()
 	if serverChoiceColumn != "" {
-		serverChoice := &pgcql.FieldString{}
-		serverChoice.WithFullText("english").SetColumn(serverChoiceColumn)
+		serverChoice := pgcql.NewFieldString().WithFullText("english").WithColumn(serverChoiceColumn)
 		def.AddField("cql.serverChoice", serverChoice)
 	}
 	flag.Parse()
@@ -26,8 +25,7 @@ func main() {
 	}
 	for i := 0; i < len(flag.Args()); i++ {
 		if i < len(flag.Args())-1 {
-			field := &pgcql.FieldString{}
-			field.WithLikeOps()
+			field := pgcql.NewFieldString().WithLikeOps()
 			def.AddField(flag.Args()[i], field)
 			continue
 		}
