@@ -71,42 +71,45 @@ func TestBuilderPrefixSortAndEscaping(t *testing.T) {
 	}
 }
 
-func TestBuilderWildcardEscaping(t *testing.T) {
+func TestBuilderSafe(t *testing.T) {
 	query, err := NewQuery().
 		Search("title").
-		Term("a*b?c^d").
+		Term("a*b?c\\^d").
 		Build()
 	if err != nil {
 		t.Fatalf("build failed: %v", err)
 	}
 
-	if got, want := query.String(), "title = a\\*b\\?c\\^d"; got != want {
+	if got, want := query.String(), "title = a\\*b\\?c\\\\\\^d"; got != want {
 		t.Fatalf("unexpected query: got %q want %q", got, want)
 	}
 
-	query, err = NewQuery().
+}
+
+func TestBuilderTermUnsafe(t *testing.T) {
+	query, err := NewQuery().
 		Search("title").
-		TermWildcard("a*b?c^d").
+		TermUnsafe("a*b?c\\^d").
 		Build()
 	if err != nil {
 		t.Fatalf("build failed: %v", err)
 	}
 
-	if got, want := query.String(), "title = a*b?c^d"; got != want {
+	if got, want := query.String(), "title = a*b?c\\^d"; got != want {
 		t.Fatalf("unexpected query: got %q want %q", got, want)
 	}
 }
 
-func TestBuilderTermVerbatim(t *testing.T) {
+func TestBuilderTermUnsafeEmpty(t *testing.T) {
 	query, err := NewQuery().
 		Search("title").
-		TermVerbatim("a\\*b").
+		TermUnsafe("").
 		Build()
 	if err != nil {
 		t.Fatalf("build failed: %v", err)
 	}
 
-	if got, want := query.String(), "title = a\\*b"; got != want {
+	if got, want := query.String(), "title = \"\""; got != want {
 		t.Fatalf("unexpected query: got %q want %q", got, want)
 	}
 }
@@ -195,18 +198,34 @@ func TestBuilderGroupedClause(t *testing.T) {
 	}
 }
 
-func TestBuilderFromStringInjection(t *testing.T) {
+func TestBuilderFromStringInjectionSafe(t *testing.T) {
 	qb, err := NewQueryFromString("title = base")
 	if err != nil {
 		t.Fatalf("parse failed: %v", err)
 	}
 
-	query, err := qb.And().Search("author").Term("OR injected=true").Build()
+	query, err := qb.And().Search("author").Term("\" OR injected=true").Build()
 	if err != nil {
 		t.Fatalf("build failed: %v", err)
 	}
 
-	if got, want := query.String(), "title = base and author = \"OR injected=true\""; got != want {
+	if got, want := query.String(), "title = base and author = \"\\\" OR injected=true\""; got != want {
+		t.Fatalf("unexpected query: got %q want %q", got, want)
+	}
+}
+
+func TestBuilderFromStringInjectionUnsafe(t *testing.T) {
+	qb, err := NewQueryFromString("title = base")
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+
+	query, err := qb.And().Search("author").TermUnsafe("\" OR injected=true").Build()
+	if err != nil {
+		t.Fatalf("build failed: %v", err)
+	}
+
+	if got, want := query.String(), "title = base and author = \"\" OR injected=true\""; got != want {
 		t.Fatalf("unexpected query: got %q want %q", got, want)
 	}
 }

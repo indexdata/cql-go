@@ -154,7 +154,7 @@ func (qb *QueryBuilder) SortByModifiers(index string, mods ...cql.Modifier) *Que
 			return qb
 		}
 		if mods[i].Value != "" {
-			mods[i].Value = escapeValue(mods[i].Value)
+			mods[i].Value = EscapeSpecialChars(mods[i].Value)
 		}
 		if mods[i].Relation == "" && mods[i].Value != "" {
 			mods[i].Relation = cql.EQ
@@ -329,7 +329,7 @@ func (jb *JoinBuilder) ModRel(name cql.CqlModifier, rel cql.Relation, value stri
 	jb.mods = append(jb.mods, cql.Modifier{
 		Name:     string(name),
 		Relation: rel,
-		Value:    escapeValue(value),
+		Value:    EscapeSpecialChars(value),
 	})
 	return jb
 }
@@ -473,35 +473,29 @@ func (sb *SearchBuilder) ModRel(name cql.CqlModifier, rel cql.Relation, value st
 	sb.mods = append(sb.mods, cql.Modifier{
 		Name:     string(name),
 		Relation: rel,
-		Value:    escapeValue(value),
+		Value:    EscapeSpecialChars(value),
 	})
 	return sb
 }
 
 // Term finalizes the search clause and returns an expression builder.
-// It escapes backslashes, quotes, and wildcard characters (*, ?, ^).
+// It escapes backslashes, quotes, and masking characters (*, ?, ^) and disallows empty terms.
 func (sb *SearchBuilder) Term(term string) *ExprBuilder {
-	return sb.termWithEscaper(term, escapeTermSafe)
+	if strings.TrimSpace(term) == "" {
+		sb.err = fmt.Errorf("search term must be non-empty")
+		return &ExprBuilder{finish: sb.finish, build: sb.build, qb: sb.qb, end: sb.end, err: sb.err}
+	}
+	return sb.termWithEscaper(term, escapeSpecialAndMaskingChars)
 }
 
-// TermWildcard finalizes the search clause and returns an expression builder.
-// It escapes backslashes and quotes, but preserves wildcard characters.
-func (sb *SearchBuilder) TermWildcard(term string) *ExprBuilder {
-	return sb.termWithEscaper(term, escapeValue)
-}
-
-// TermVerbatim finalizes the search clause and returns an expression builder.
+// TermUnsafe finalizes the search clause and returns an expression builder.
 // It does not escape or alter the term.
-func (sb *SearchBuilder) TermVerbatim(term string) *ExprBuilder {
+func (sb *SearchBuilder) TermUnsafe(term string) *ExprBuilder {
 	return sb.termWithEscaper(term, identityValue)
 }
 
 func (sb *SearchBuilder) termWithEscaper(term string, esc func(string) string) *ExprBuilder {
 	if sb.err != nil {
-		return &ExprBuilder{finish: sb.finish, build: sb.build, qb: sb.qb, end: sb.end, err: sb.err}
-	}
-	if strings.TrimSpace(term) == "" {
-		sb.err = fmt.Errorf("search term must be non-empty")
 		return &ExprBuilder{finish: sb.finish, build: sb.build, qb: sb.qb, end: sb.end, err: sb.err}
 	}
 	if sb.rel != "" && !isValidRelation(sb.rel) {
@@ -519,7 +513,8 @@ func (sb *SearchBuilder) termWithEscaper(term string, esc func(string) string) *
 	return sb.finish(clause)
 }
 
-func escapeValue(s string) string {
+// Escapes backslashes and quotes in a string.
+func EscapeSpecialChars(s string) string {
 	if s == "" {
 		return s
 	}
@@ -528,8 +523,8 @@ func escapeValue(s string) string {
 	return s
 }
 
-func escapeTermSafe(s string) string {
-	s = escapeValue(s)
+// Escapes masking characters (*, ?, ^) in a string.
+func EscapeMaskingChars(s string) string {
 	if s == "" {
 		return s
 	}
@@ -537,6 +532,10 @@ func escapeTermSafe(s string) string {
 	s = strings.ReplaceAll(s, "?", "\\?")
 	s = strings.ReplaceAll(s, "^", "\\^")
 	return s
+}
+
+func escapeSpecialAndMaskingChars(s string) string {
+	return EscapeMaskingChars(EscapeSpecialChars(s))
 }
 
 func identityValue(s string) string {
