@@ -32,6 +32,16 @@ func NewQueryFrom(query cql.Query) *QueryBuilder {
 	}
 }
 
+// BeginClause starts a grouped root clause.
+func (qb *QueryBuilder) BeginClause() *ClauseBuilder {
+	if qb.err == nil && qb.root != nil {
+		qb.err = fmt.Errorf("query already has a root clause")
+	}
+	return &ClauseBuilder{
+		ctx: &clauseContext{root: qb},
+	}
+}
+
 // QueryBuilder builds a validated cql.Query.
 type QueryBuilder struct {
 	prefixes []cql.Prefix
@@ -178,18 +188,18 @@ func (qb *QueryBuilder) Build() (cql.Query, error) {
 
 func (qb *QueryBuilder) finishAppend(clause cql.Clause) *ExprBuilder {
 	if qb.err != nil {
-		return &ExprBuilder{finish: qb.finishAppend, build: qb.Build, qb: qb, err: qb.err}
+		return &ExprBuilder{finish: qb.finishAppend, build: qb.Build, qb: qb, end: nil, err: qb.err}
 	}
 	qb.root = &clause
-	return &ExprBuilder{finish: qb.finishAppend, build: qb.Build, qb: qb, clause: clause}
+	return &ExprBuilder{finish: qb.finishAppend, build: qb.Build, qb: qb, end: nil, clause: clause}
 }
 
 func (qb *QueryBuilder) finishRoot(clause cql.Clause) *ExprBuilder {
 	if qb.err != nil {
-		return &ExprBuilder{finish: qb.finishRoot, build: qb.Build, qb: qb, err: qb.err}
+		return &ExprBuilder{finish: qb.finishRoot, build: qb.Build, qb: qb, end: nil, err: qb.err}
 	}
 	qb.root = &clause
-	return &ExprBuilder{finish: qb.finishRoot, build: qb.Build, qb: qb, clause: clause}
+	return &ExprBuilder{finish: qb.finishRoot, build: qb.Build, qb: qb, end: nil, clause: clause}
 }
 
 // ExprBuilder represents a completed expression that can be extended with boolean operators.
@@ -197,6 +207,7 @@ type ExprBuilder struct {
 	finish func(cql.Clause) *ExprBuilder
 	build  func() (cql.Query, error)
 	qb     *QueryBuilder
+	end    func(cql.Clause) *ExprBuilder
 	clause cql.Clause
 	err    error
 }
@@ -219,6 +230,15 @@ func (eb *ExprBuilder) Not() *JoinBuilder {
 // Prox starts a PROX boolean expression.
 func (eb *ExprBuilder) Prox() *JoinBuilder {
 	return eb.join(cql.PROX)
+}
+
+// EndClause closes a grouped clause and returns to the parent expression.
+func (eb *ExprBuilder) EndClause() *ExprBuilder {
+	if eb.end == nil {
+		eb.err = fmt.Errorf("no open clause to end")
+		return eb
+	}
+	return eb.end(eb.clause)
 }
 
 // SortBy adds a sort criterion with simple (name-only) modifiers.
@@ -258,6 +278,7 @@ func (eb *ExprBuilder) join(op cql.Operator) *JoinBuilder {
 		finish: eb.finish,
 		build:  eb.build,
 		qb:     eb.qb,
+		end:    eb.end,
 		left:   eb.clause,
 		op:     op,
 		err:    eb.err,
@@ -269,6 +290,7 @@ type JoinBuilder struct {
 	finish func(cql.Clause) *ExprBuilder
 	build  func() (cql.Query, error)
 	qb     *QueryBuilder
+	end    func(cql.Clause) *ExprBuilder
 	left   cql.Clause
 	op     cql.Operator
 	mods   []cql.Modifier
@@ -312,22 +334,30 @@ func (jb *JoinBuilder) ModRel(name cql.CqlModifier, rel cql.Relation, value stri
 	return jb
 }
 
+// BeginClause starts a grouped boolean clause as the right-hand side.
+func (jb *JoinBuilder) BeginClause() *ClauseBuilder {
+	return &ClauseBuilder{
+		ctx: &clauseContext{parent: jb},
+	}
+}
+
 // Search provides the right-hand search clause.
 func (jb *JoinBuilder) Search(index string) *SearchBuilder {
 	return &SearchBuilder{
 		index:  index,
 		finish: jb.finishRight,
+		end:    jb.end,
 		err:    jb.err,
 	}
 }
 
 func (jb *JoinBuilder) finishRight(right cql.Clause) *ExprBuilder {
 	if jb.err != nil {
-		return &ExprBuilder{finish: jb.finish, build: jb.build, qb: jb.qb, err: jb.err}
+		return &ExprBuilder{finish: jb.finish, build: jb.build, qb: jb.qb, end: jb.end, err: jb.err}
 	}
 	if !isValidOperator(jb.op) {
 		jb.err = fmt.Errorf("invalid boolean operator: %q", jb.op)
-		return &ExprBuilder{finish: jb.finish, build: jb.build, qb: jb.qb, err: jb.err}
+		return &ExprBuilder{finish: jb.finish, build: jb.build, qb: jb.qb, end: jb.end, err: jb.err}
 	}
 	bc := cql.BoolClause{
 		Left:      jb.left,
@@ -339,6 +369,53 @@ func (jb *JoinBuilder) finishRight(right cql.Clause) *ExprBuilder {
 	return jb.finish(clause)
 }
 
+type clauseContext struct {
+	root   *QueryBuilder
+	parent *JoinBuilder
+}
+
+func (cc *clauseContext) finish(clause cql.Clause) *ExprBuilder {
+	return &ExprBuilder{
+		finish: cc.finish,
+		end:    cc.end,
+		clause: clause,
+		err:    cc.err(),
+	}
+}
+
+func (cc *clauseContext) end(clause cql.Clause) *ExprBuilder {
+	if cc.root != nil {
+		if cc.root.err != nil {
+			return &ExprBuilder{finish: cc.finish, build: cc.root.Build, qb: cc.root, end: nil, err: cc.root.err}
+		}
+		cc.root.root = &clause
+		return &ExprBuilder{finish: cc.root.finishRoot, build: cc.root.Build, qb: cc.root, end: nil, clause: clause}
+	}
+	return cc.parent.finishRight(clause)
+}
+
+func (cc *clauseContext) err() error {
+	if cc.root != nil {
+		return cc.root.err
+	}
+	return cc.parent.err
+}
+
+// ClauseBuilder builds a grouped clause on the right-hand side of a boolean operator.
+type ClauseBuilder struct {
+	ctx *clauseContext
+}
+
+// Search starts the grouped clause with a search expression.
+func (cb *ClauseBuilder) Search(index string) *SearchBuilder {
+	return &SearchBuilder{
+		index:  index,
+		finish: cb.ctx.finish,
+		end:    cb.ctx.end,
+		err:    cb.ctx.err(),
+	}
+}
+
 // SearchBuilder builds a search clause.
 type SearchBuilder struct {
 	index  string
@@ -347,6 +424,7 @@ type SearchBuilder struct {
 	finish func(cql.Clause) *ExprBuilder
 	build  func() (cql.Query, error)
 	qb     *QueryBuilder
+	end    func(cql.Clause) *ExprBuilder
 	err    error
 }
 
@@ -403,15 +481,15 @@ func (sb *SearchBuilder) ModRel(name cql.CqlModifier, rel cql.Relation, value st
 // Term finalizes the search clause and returns an expression builder.
 func (sb *SearchBuilder) Term(term string) *ExprBuilder {
 	if sb.err != nil {
-		return &ExprBuilder{finish: sb.finish, build: sb.build, qb: sb.qb, err: sb.err}
+		return &ExprBuilder{finish: sb.finish, build: sb.build, qb: sb.qb, end: sb.end, err: sb.err}
 	}
 	if strings.TrimSpace(term) == "" {
 		sb.err = fmt.Errorf("search term must be non-empty")
-		return &ExprBuilder{finish: sb.finish, build: sb.build, qb: sb.qb, err: sb.err}
+		return &ExprBuilder{finish: sb.finish, build: sb.build, qb: sb.qb, end: sb.end, err: sb.err}
 	}
 	if sb.rel != "" && !isValidRelation(sb.rel) {
 		sb.err = fmt.Errorf("invalid relation: %q", sb.rel)
-		return &ExprBuilder{finish: sb.finish, build: sb.build, qb: sb.qb, err: sb.err}
+		return &ExprBuilder{finish: sb.finish, build: sb.build, qb: sb.qb, end: sb.end, err: sb.err}
 	}
 	clause := cql.Clause{
 		SearchClause: &cql.SearchClause{

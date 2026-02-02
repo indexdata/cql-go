@@ -128,6 +128,33 @@ func TestBuilderFromString(t *testing.T) {
 	}
 }
 
+func TestBuilderGroupedClause(t *testing.T) {
+	query, err := NewQuery().
+		BeginClause().
+		Search("a").
+		Term("a").
+		Or().
+		Search("b").
+		Term("b").
+		EndClause().
+		And().
+		BeginClause().
+		Search("d").
+		Term("d").
+		Or().
+		Search("b").
+		Term("b").
+		EndClause().
+		Build()
+	if err != nil {
+		t.Fatalf("build failed: %v", err)
+	}
+	//CQL is left associative so the stringifier skips left parentheses
+	if got, want := query.String(), "a = a or b = b and (d = d or b = b)"; got != want {
+		t.Fatalf("unexpected query: got %q want %q", got, want)
+	}
+}
+
 func TestBuilderFromStringInjection(t *testing.T) {
 	qb, err := NewQueryFromString("title = base")
 	if err != nil {
