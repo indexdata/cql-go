@@ -71,6 +71,46 @@ func TestBuilderPrefixSortAndEscaping(t *testing.T) {
 	}
 }
 
+func TestBuilderWildcardEscaping(t *testing.T) {
+	query, err := NewQuery().
+		Search("title").
+		Term("a*b?c^d").
+		Build()
+	if err != nil {
+		t.Fatalf("build failed: %v", err)
+	}
+
+	if got, want := query.String(), "title = a\\*b\\?c\\^d"; got != want {
+		t.Fatalf("unexpected query: got %q want %q", got, want)
+	}
+
+	query, err = NewQuery().
+		Search("title").
+		TermWildcard("a*b?c^d").
+		Build()
+	if err != nil {
+		t.Fatalf("build failed: %v", err)
+	}
+
+	if got, want := query.String(), "title = a*b?c^d"; got != want {
+		t.Fatalf("unexpected query: got %q want %q", got, want)
+	}
+}
+
+func TestBuilderTermVerbatim(t *testing.T) {
+	query, err := NewQuery().
+		Search("title").
+		TermVerbatim("a\\*b").
+		Build()
+	if err != nil {
+		t.Fatalf("build failed: %v", err)
+	}
+
+	if got, want := query.String(), "title = a\\*b"; got != want {
+		t.Fatalf("unexpected query: got %q want %q", got, want)
+	}
+}
+
 func TestBuilderValidation(t *testing.T) {
 	if _, err := NewQuery().Search("a").Term("").Build(); err == nil {
 		t.Fatalf("expected error for empty term")

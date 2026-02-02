@@ -479,7 +479,24 @@ func (sb *SearchBuilder) ModRel(name cql.CqlModifier, rel cql.Relation, value st
 }
 
 // Term finalizes the search clause and returns an expression builder.
+// It escapes backslashes, quotes, and wildcard characters (*, ?, ^).
 func (sb *SearchBuilder) Term(term string) *ExprBuilder {
+	return sb.termWithEscaper(term, escapeTermSafe)
+}
+
+// TermWildcard finalizes the search clause and returns an expression builder.
+// It escapes backslashes and quotes, but preserves wildcard characters.
+func (sb *SearchBuilder) TermWildcard(term string) *ExprBuilder {
+	return sb.termWithEscaper(term, escapeValue)
+}
+
+// TermVerbatim finalizes the search clause and returns an expression builder.
+// It does not escape or alter the term.
+func (sb *SearchBuilder) TermVerbatim(term string) *ExprBuilder {
+	return sb.termWithEscaper(term, identityValue)
+}
+
+func (sb *SearchBuilder) termWithEscaper(term string, esc func(string) string) *ExprBuilder {
 	if sb.err != nil {
 		return &ExprBuilder{finish: sb.finish, build: sb.build, qb: sb.qb, end: sb.end, err: sb.err}
 	}
@@ -496,7 +513,7 @@ func (sb *SearchBuilder) Term(term string) *ExprBuilder {
 			Index:     sb.index,
 			Relation:  sb.rel,
 			Modifiers: sb.mods,
-			Term:      escapeValue(term),
+			Term:      esc(term),
 		},
 	}
 	return sb.finish(clause)
@@ -508,6 +525,21 @@ func escapeValue(s string) string {
 	}
 	s = strings.ReplaceAll(s, "\\", "\\\\")
 	s = strings.ReplaceAll(s, "\"", "\\\"")
+	return s
+}
+
+func escapeTermSafe(s string) string {
+	s = escapeValue(s)
+	if s == "" {
+		return s
+	}
+	s = strings.ReplaceAll(s, "*", "\\*")
+	s = strings.ReplaceAll(s, "?", "\\?")
+	s = strings.ReplaceAll(s, "^", "\\^")
+	return s
+}
+
+func identityValue(s string) string {
 	return s
 }
 
