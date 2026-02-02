@@ -30,6 +30,35 @@ func main() {
 
 See the [cql-cli source](cmd/cql-cli/main.go) for a more complete example.
 
+## Building CQL programmatically
+
+If you want to construct valid CQL queries without hand-assembling the AST, use the
+fluent builder in `cqlbuilder` which validates inputs and escapes terms.
+
+```go
+import (
+   "fmt"
+
+   "github.com/indexdata/cql-go/cql"
+   "github.com/indexdata/cql-go/cqlbuilder"
+)
+
+func main() {
+   query, err := cqlbuilder.NewQuery().
+      Prefix("dc", "http://purl.org/dc/elements/1.1/").
+      Search("dc.title").
+      Rel(cql.EQ).
+      Term("the \"little\" prince").
+      SortBy("dc.title", cql.IgnoreCase).
+      Build()
+   if err != nil {
+      fmt.Fprintln(os.Stderr, "ERROR", err)
+      return
+   }
+   fmt.Println(query.String())
+}
+```
+
 ## Conformance
 
 The CQL specification requires that a query consist of a single search term with an optional index and relation:
