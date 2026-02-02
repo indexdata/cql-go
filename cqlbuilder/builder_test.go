@@ -471,8 +471,12 @@ func TestBuilderAppendInvalidOperator(t *testing.T) {
 		left:   expr.clause,
 		op:     "bogus",
 	}
-	if _, err := jb.Search("c").Term("d").Build(); err == nil {
-		t.Fatalf("expected error for invalid boolean operator")
+	query, err := jb.Search("c").Term("d").Build()
+	if err != nil {
+		t.Fatalf("unexpected error for invalid boolean operator: %v", err)
+	}
+	if got, want := query.String(), "a = b"; got != want {
+		t.Fatalf("unexpected query: got %q want %q", got, want)
 	}
 }
 
