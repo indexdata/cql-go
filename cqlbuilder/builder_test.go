@@ -56,19 +56,19 @@ func TestBuilderPrefixSortAndEscaping(t *testing.T) {
 func TestBuilderSafe(t *testing.T) {
 	query, err := NewQuery().
 		Search("title").
-		Term("a*b?c\\^d").
+		Term("a*b?c\\^d\"\\").
 		Build()
 	assert.NoError(t, err, "build failed")
-	assert.Equal(t, "title = a\\*b\\?c\\\\\\^d", query.String(), "unexpected query string")
+	assert.Equal(t, "title = a\\*b\\?c\\\\\\^d\\\"\\\\", query.String(), "unexpected query string")
 }
 
 func TestBuilderTermUnsafe(t *testing.T) {
 	query, err := NewQuery().
 		Search("title").
-		TermUnsafe("a*b?c\\^d").
+		TermUnsafe("a*b?c\\^d\"\\").
 		Build()
 	assert.NoError(t, err, "build failed")
-	assert.Equal(t, "title = a*b?c\\^d", query.String(), "unexpected query string")
+	assert.Equal(t, "title = a*b?c\\^d\\\"\\\\", query.String(), "unexpected query string")
 }
 
 func TestBuilderTermUnsafeEmpty(t *testing.T) {
@@ -181,7 +181,7 @@ func TestBuilderFromStringInjectionUnsafe(t *testing.T) {
 
 	query, err := qb.And().Search("author").TermUnsafe("\" OR injected=true").Build()
 	assert.NoError(t, err, "build failed")
-	assert.Equal(t, "title = base and author = \"\" OR injected=true\"", query.String(), "unexpected query string")
+	assert.Equal(t, "title = base and author = \"\\\" OR injected=true\"", query.String(), "unexpected query string")
 }
 
 func TestBuilderErrorsAndModifiers(t *testing.T) {
@@ -333,7 +333,7 @@ func TestBuilderSortByModifiersEscaping(t *testing.T) {
 		SortByModifiers("title", cql.Modifier{Name: "locale", Relation: cql.EQ, Value: "en\"US"}).
 		Build()
 	assert.NoError(t, err, "build failed")
-	assert.Equal(t, "title = hello sortBy title/locale=\"en\\\"US\"", query.String(), "unexpected query string")
+	assert.Equal(t, "title = hello sortBy title/locale=en\\\"US", query.String(), "unexpected query string")
 }
 
 func TestBuilderSortByModifiersDefaultRelation(t *testing.T) {
@@ -374,7 +374,7 @@ func TestBuilderSearchModifiers(t *testing.T) {
 		Build()
 
 	assert.NoError(t, err, "build failed")
-	assert.Equal(t, "title =/locale/locale=\"en\\\"US\" hello", query.String(), "unexpected query string")
+	assert.Equal(t, "title =/locale/locale=en\\\"US hello", query.String(), "unexpected query string")
 }
 
 func TestBuilderSearchModifiersValidation(t *testing.T) {

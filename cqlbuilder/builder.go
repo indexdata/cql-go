@@ -482,7 +482,7 @@ func (sb *SearchBuilder) ModRel(name cql.CqlModifier, rel cql.Relation, value st
 }
 
 // Term finalizes the search clause and returns an expression builder.
-// It escapes backslashes, quotes, and masking characters (*, ?, ^) and disallows empty terms.
+// It escapes input backslashes, quotes, and masking characters (*, ?, ^) and disallows empty terms.
 func (sb *SearchBuilder) Term(term string) *ExprBuilder {
 	if strings.TrimSpace(term) == "" {
 		sb.err = fmt.Errorf("search term must be non-empty")
@@ -492,7 +492,8 @@ func (sb *SearchBuilder) Term(term string) *ExprBuilder {
 }
 
 // TermUnsafe finalizes the search clause and returns an expression builder.
-// It does not escape or alter the term.
+// It does not escape any input chars, but unescaped quotes and trailing backslash
+//	are always escaped when the query is stringified to ensure valid query syntax.
 func (sb *SearchBuilder) TermUnsafe(term string) *ExprBuilder {
 	return sb.termWithEscaper(term, identityValue)
 }

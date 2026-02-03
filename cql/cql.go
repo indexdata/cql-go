@@ -277,13 +277,34 @@ func (bc *BoolClause) String() string {
 	return sb.String()
 }
 
+const opsAndWhitespace = "()/<>= \t\r\n"
+
 func quote(sb *strings.Builder, s string) {
-	if s == "" || strings.ContainsAny(s, " ()=<>\"/") {
-		sb.WriteString("\"")
-		sb.WriteString(s)
-		sb.WriteString("\"")
+	quote := s == ""
+	escaped := false
+	var term strings.Builder
+
+	for _, ch := range s {
+		if strings.ContainsRune(opsAndWhitespace, ch) {
+			quote = true
+		}
+		if ch == '"' && !escaped {
+			term.WriteByte('\\')
+		}
+		escaped = ch == '\\' && !escaped
+		term.WriteRune(ch)
+	}
+	if escaped {
+		// Trailing backslash: escape it.
+		term.WriteByte('\\')
+	}
+
+	if quote {
+		sb.WriteByte('"')
+		sb.WriteString(term.String())
+		sb.WriteByte('"')
 	} else {
-		sb.WriteString(s)
+		sb.WriteString(term.String())
 	}
 }
 
