@@ -267,6 +267,9 @@ func (eb *ExprBuilder) SortByModifiers(index string, mods ...cql.Modifier) *Expr
 
 // Build finalizes and returns the query.
 func (eb *ExprBuilder) Build() (cql.Query, error) {
+	if eb.err != nil {
+		return cql.Query{}, eb.err
+	}
 	if eb.build == nil {
 		return cql.Query{}, fmt.Errorf("builder is missing query context")
 	}
@@ -515,9 +518,6 @@ func (sb *SearchBuilder) termWithEscaper(term string, esc func(string) string) *
 
 // Escapes backslashes and quotes in a string.
 func EscapeSpecialChars(s string) string {
-	if s == "" {
-		return s
-	}
 	s = strings.ReplaceAll(s, "\\", "\\\\")
 	s = strings.ReplaceAll(s, "\"", "\\\"")
 	return s
@@ -525,9 +525,6 @@ func EscapeSpecialChars(s string) string {
 
 // Escapes masking characters (*, ?, ^) in a string.
 func EscapeMaskingChars(s string) string {
-	if s == "" {
-		return s
-	}
 	s = strings.ReplaceAll(s, "*", "\\*")
 	s = strings.ReplaceAll(s, "?", "\\?")
 	s = strings.ReplaceAll(s, "^", "\\^")

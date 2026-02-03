@@ -83,11 +83,11 @@ func TestBuilderTermUnsafeEmpty(t *testing.T) {
 func TestBuilderValidation(t *testing.T) {
 	_, err := NewQuery().Search("a").Term("").Build()
 	assert.Error(t, err, "expected error for empty term")
-	assert.Equal(t, "query requires a root clause", err.Error())
+	assert.Equal(t, "search term must be non-empty", err.Error())
 
 	_, err = NewQuery().Search("a").Rel("bogus").Term("x").Build()
 	assert.Error(t, err, "expected error for invalid relation")
-	assert.Equal(t, "query requires a root clause", err.Error())
+	assert.Equal(t, "invalid relation: \"bogus\"", err.Error())
 
 	_, err = NewQuery().SortBy("").Build()
 	assert.Error(t, err, "expected error for empty sort index")
@@ -219,7 +219,7 @@ func TestBuilderAppendErrors(t *testing.T) {
 		Term("b").
 		Build()
 	assert.Error(t, err, "cannot append boolean operator without existing root clause")
-	assert.Equal(t, "builder is missing query context", err.Error())
+	assert.Equal(t, "query requires a root clause before appending", err.Error())
 }
 
 func TestBuilderBeginClauseErrors(t *testing.T) {
@@ -251,7 +251,7 @@ func TestBuilderJoinModifiersValidation(t *testing.T) {
 		Term("d").
 		Build()
 	assert.Error(t, err, "expected error for empty boolean modifier name")
-	assert.Equal(t, "builder is missing query context", err.Error())
+	assert.Equal(t, "modifier name must be non-empty", err.Error())
 
 	_, err = NewQuery().
 		Search("a").
@@ -263,7 +263,7 @@ func TestBuilderJoinModifiersValidation(t *testing.T) {
 		Build()
 
 	assert.Error(t, err, "expected error for invalid boolean modifier relation")
-	assert.Equal(t, "builder is missing query context", err.Error())
+	assert.Equal(t, "invalid modifier relation: \"bogus\"", err.Error())
 }
 
 func TestBuilderRelationValidation(t *testing.T) {
@@ -273,14 +273,14 @@ func TestBuilderRelationValidation(t *testing.T) {
 		Term("b").
 		Build()
 	assert.Error(t, err, "expected error for invalid relation")
-	assert.Equal(t, "query requires a root clause", err.Error())
+	assert.Equal(t, "invalid relation: \"bogus\"", err.Error())
 }
 
 func TestBuilderEndClauseWithoutStart(t *testing.T) {
 	expr := &ExprBuilder{}
 	_, err := expr.EndClause().Build()
 	assert.Error(t, err, "expected error for EndClause without BeginClause")
-	assert.Equal(t, "builder is missing query context", err.Error())
+	assert.Equal(t, "no open clause to end", err.Error())
 }
 
 func TestBuilderMultiplePrefixes(t *testing.T) {
@@ -353,7 +353,7 @@ func TestBuilderSearchModifiersValidation(t *testing.T) {
 		Term("hello").
 		Build()
 	assert.Error(t, err, "expected error for empty search modifier name")
-	assert.Equal(t, "query requires a root clause", err.Error())
+	assert.Equal(t, "modifier name must be non-empty", err.Error())
 
 	_, err = NewQuery().
 		Search("title").
@@ -361,7 +361,7 @@ func TestBuilderSearchModifiersValidation(t *testing.T) {
 		Term("hello").
 		Build()
 	assert.Error(t, err, "expected error for invalid search modifier relation")
-	assert.Equal(t, "query requires a root clause", err.Error())
+	assert.Equal(t, "invalid modifier relation: \"bogus\"", err.Error())
 }
 
 func TestBuilderSearchRelationDefaults(t *testing.T) {
@@ -384,9 +384,8 @@ func TestBuilderAppendInvalidOperator(t *testing.T) {
 		left:   expr.clause,
 		op:     "bogus",
 	}
-	query, err := jb.Search("c").Term("d").Build()
-	assert.NoError(t, err, "unexpected error for invalid boolean operator")
-	assert.Equal(t, "a = b", query.String(), "unexpected query string")
+	_, err := jb.Search("c").Term("d").Build()
+	assert.Error(t, err, "expected error for invalid boolean operator")
 }
 
 func TestBuilderEscapeHelpers(t *testing.T) {
