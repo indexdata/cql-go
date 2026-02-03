@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/indexdata/cql-go/cql"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestBuilderSearch(t *testing.T) {
@@ -12,13 +13,8 @@ func TestBuilderSearch(t *testing.T) {
 		Rel(cql.EQ).
 		Term("hello").
 		Build()
-	if err != nil {
-		t.Fatalf("build failed: %v", err)
-	}
-
-	if got, want := query.String(), "dc.title = hello"; got != want {
-		t.Fatalf("unexpected query: got %q want %q", got, want)
-	}
+	assert.NoError(t, err, "build failed")
+	assert.Equal(t, "dc.title = hello", query.String(), "unexpected query string")
 }
 
 func TestBuilderSearchMultiWord(t *testing.T) {
@@ -27,13 +23,8 @@ func TestBuilderSearchMultiWord(t *testing.T) {
 		Rel(cql.EQ).
 		Term("hello world").
 		Build()
-	if err != nil {
-		t.Fatalf("build failed: %v", err)
-	}
-
-	if got, want := query.String(), "dc.title = \"hello world\""; got != want {
-		t.Fatalf("unexpected query: got %q want %q", got, want)
-	}
+	assert.NoError(t, err, "build failed")
+	assert.Equal(t, "dc.title = \"hello world\"", query.String(), "unexpected query string")
 }
 
 func TestBuilderBooleanAnd(t *testing.T) {
@@ -45,13 +36,8 @@ func TestBuilderBooleanAnd(t *testing.T) {
 		Rel(cql.GE).
 		Term("2").
 		Build()
-	if err != nil {
-		t.Fatalf("build failed: %v", err)
-	}
-
-	if got, want := query.String(), "a = one and b >= 2"; got != want {
-		t.Fatalf("unexpected query: got %q want %q", got, want)
-	}
+	assert.NoError(t, err, "build failed")
+	assert.Equal(t, "a = one and b >= 2", query.String(), "unexpected query string")
 }
 
 func TestBuilderPrefixSortAndEscaping(t *testing.T) {
@@ -61,14 +47,10 @@ func TestBuilderPrefixSortAndEscaping(t *testing.T) {
 		Term("the \"little\" prince").
 		SortBy("dc.title", cql.IgnoreCase).
 		Build()
-	if err != nil {
-		t.Fatalf("build failed: %v", err)
-	}
+	assert.NoError(t, err, "build failed")
 
 	want := "> dc = \"http://purl.org/dc/elements/1.1/\" dc.title = \"the \\\"little\\\" prince\" sortBy dc.title/ignoreCase"
-	if got := query.String(); got != want {
-		t.Fatalf("unexpected query: got %q want %q", got, want)
-	}
+	assert.Equal(t, want, query.String(), "unexpected query string")
 }
 
 func TestBuilderSafe(t *testing.T) {
@@ -76,14 +58,8 @@ func TestBuilderSafe(t *testing.T) {
 		Search("title").
 		Term("a*b?c\\^d").
 		Build()
-	if err != nil {
-		t.Fatalf("build failed: %v", err)
-	}
-
-	if got, want := query.String(), "title = a\\*b\\?c\\\\\\^d"; got != want {
-		t.Fatalf("unexpected query: got %q want %q", got, want)
-	}
-
+	assert.NoError(t, err, "build failed")
+	assert.Equal(t, "title = a\\*b\\?c\\\\\\^d", query.String(), "unexpected query string")
 }
 
 func TestBuilderTermUnsafe(t *testing.T) {
@@ -91,13 +67,8 @@ func TestBuilderTermUnsafe(t *testing.T) {
 		Search("title").
 		TermUnsafe("a*b?c\\^d").
 		Build()
-	if err != nil {
-		t.Fatalf("build failed: %v", err)
-	}
-
-	if got, want := query.String(), "title = a*b?c\\^d"; got != want {
-		t.Fatalf("unexpected query: got %q want %q", got, want)
-	}
+	assert.NoError(t, err, "build failed")
+	assert.Equal(t, "title = a*b?c\\^d", query.String(), "unexpected query string")
 }
 
 func TestBuilderTermUnsafeEmpty(t *testing.T) {
@@ -105,29 +76,40 @@ func TestBuilderTermUnsafeEmpty(t *testing.T) {
 		Search("title").
 		TermUnsafe("").
 		Build()
-	if err != nil {
-		t.Fatalf("build failed: %v", err)
-	}
-
-	if got, want := query.String(), "title = \"\""; got != want {
-		t.Fatalf("unexpected query: got %q want %q", got, want)
-	}
+	assert.NoError(t, err, "build failed")
+	assert.Equal(t, "title = \"\"", query.String(), "unexpected query string")
 }
 
 func TestBuilderValidation(t *testing.T) {
-	if _, err := NewQuery().Search("a").Term("").Build(); err == nil {
-		t.Fatalf("expected error for empty term")
-	}
+	_, err := NewQuery().Search("a").Term("").Build()
+	assert.Error(t, err, "expected error for empty term")
+	assert.Equal(t, "search term must be non-empty", err.Error())
 
-	if _, err := NewQuery().Search("a").Rel("bogus").Term("x").Build(); err == nil {
-		t.Fatalf("expected error for invalid relation")
-	}
+	_, err = NewQuery().Search("a").Rel("bogus").Term("x").Build()
+	assert.Error(t, err, "expected error for invalid relation")
+	assert.Equal(t, "invalid relation: \"bogus\"", err.Error())
 
+	_, err = NewQuery().SortBy("").Build()
+	assert.Error(t, err, "expected error for empty sort index")
+	assert.Equal(t, "sort index must be non-empty", err.Error())
+
+	_, err = NewQuery().Prefix("x", "").Build()
+	assert.Error(t, err, "expected error for empty prefix")
+	assert.Equal(t, "prefix uri must be non-empty", err.Error())
+
+	_, err = NewQuery().Prefix("x", "").Prefix("a", "b").SortBy("title").SortByModifiers("asc").Build()
+	assert.Error(t, err, "expected error for empty prefix")
+	assert.Equal(t, "prefix uri must be non-empty", err.Error())
+}
+
+func TestBuilderDuplicateRoot(t *testing.T) {
 	qb := NewQuery()
-	_, _ = qb.Search("a").Term("x").Build()
-	if _, err := qb.Search("b").Term("y").Build(); err == nil {
-		t.Fatalf("expected error for duplicate root")
-	}
+	_, err := qb.Search("a").Term("x").Build()
+	assert.NoError(t, err, "unexpected error building first root clause")
+
+	_, err = qb.Search("b").Term("y").Build()
+	assert.Error(t, err, "expected error for duplicate root")
+	assert.Equal(t, "query already has a root clause", err.Error())
 }
 
 func TestBuilderAppendToExistingQuery(t *testing.T) {
@@ -146,29 +128,20 @@ func TestBuilderAppendToExistingQuery(t *testing.T) {
 		Search("author").
 		Term("alice").
 		Build()
-	if err != nil {
-		t.Fatalf("build failed: %v", err)
-	}
-
-	if got, want := query.String(), "title = base and author = alice"; got != want {
-		t.Fatalf("unexpected query: got %q want %q", got, want)
-	}
+	assert.NoError(t, err, "build failed")
+	assert.Equal(t, "title = base and author = alice", query.String(), "unexpected query string")
 }
 
 func TestBuilderFromString(t *testing.T) {
 	qb, err := NewQueryFromString("title = base")
-	if err != nil {
-		t.Fatalf("parse failed: %v", err)
-	}
+	assert.NoError(t, err, "parse failed")
 
 	query, err := qb.And().Search("author").Term("alice").Build()
-	if err != nil {
-		t.Fatalf("build failed: %v", err)
-	}
+	assert.NoError(t, err, "build failed")
+	assert.Equal(t, "title = base and author = alice", query.String(), "unexpected query string")
 
-	if got, want := query.String(), "title = base and author = alice"; got != want {
-		t.Fatalf("unexpected query: got %q want %q", got, want)
-	}
+	_, err = NewQueryFromString("a and")
+	assert.Error(t, err, "expected parse failed")
 }
 
 func TestBuilderGroupedClause(t *testing.T) {
@@ -189,93 +162,83 @@ func TestBuilderGroupedClause(t *testing.T) {
 		Term("b").
 		EndClause().
 		Build()
-	if err != nil {
-		t.Fatalf("build failed: %v", err)
-	}
+	assert.NoError(t, err, "build failed")
 	//CQL is left associative so the stringifier skips left parentheses
-	if got, want := query.String(), "a = a or b = b and (d = d or b = b)"; got != want {
-		t.Fatalf("unexpected query: got %q want %q", got, want)
-	}
+	assert.Equal(t, "a = a or b = b and (d = d or b = b)", query.String(), "unexpected query string")
 }
 
 func TestBuilderFromStringInjectionSafe(t *testing.T) {
 	qb, err := NewQueryFromString("title = base")
-	if err != nil {
-		t.Fatalf("parse failed: %v", err)
-	}
-
+	assert.NoError(t, err, "build failed")
 	query, err := qb.And().Search("author").Term("\" OR injected=true").Build()
-	if err != nil {
-		t.Fatalf("build failed: %v", err)
-	}
-
-	if got, want := query.String(), "title = base and author = \"\\\" OR injected=true\""; got != want {
-		t.Fatalf("unexpected query: got %q want %q", got, want)
-	}
+	assert.NoError(t, err, "build failed")
+	assert.Equal(t, "title = base and author = \"\\\" OR injected=true\"", query.String(), "unexpected query string")
 }
 
 func TestBuilderFromStringInjectionUnsafe(t *testing.T) {
 	qb, err := NewQueryFromString("title = base")
-	if err != nil {
-		t.Fatalf("parse failed: %v", err)
-	}
+	assert.NoError(t, err, "parse failed")
 
 	query, err := qb.And().Search("author").TermUnsafe("\" OR injected=true").Build()
-	if err != nil {
-		t.Fatalf("build failed: %v", err)
-	}
-
-	if got, want := query.String(), "title = base and author = \"\" OR injected=true\""; got != want {
-		t.Fatalf("unexpected query: got %q want %q", got, want)
-	}
+	assert.NoError(t, err, "build failed")
+	assert.Equal(t, "title = base and author = \"\" OR injected=true\"", query.String(), "unexpected query string")
 }
 
 func TestBuilderErrorsAndModifiers(t *testing.T) {
-	if _, err := NewQuery().Build(); err == nil {
-		t.Fatalf("expected error for missing root clause")
-	}
+	_, err := NewQuery().Build()
+	assert.Error(t, err, "expected error for missing root clause")
+	assert.Equal(t, "query requires a root clause", err.Error())
 
-	if _, err := NewQuery().Prefix("p", "").Build(); err == nil {
-		t.Fatalf("expected error for empty prefix uri")
-	}
+	_, err = NewQuery().Prefix("p", "").Build()
+	assert.Error(t, err, "expected error for empty prefix uri")
+	assert.Equal(t, "prefix uri must be non-empty", err.Error())
 
-	if _, err := NewQuery().SortBy("").Build(); err == nil {
-		t.Fatalf("expected error for empty sort index")
-	}
+	_, err = NewQuery().SortBy("").Build()
+	assert.Error(t, err, "expected error for empty sort index")
+	assert.Equal(t, "sort index must be non-empty", err.Error())
 
-	if _, err := NewQuery().
+	_, err = NewQuery().
 		Search("a").
 		Term("b").
 		SortBy("title", "").
-		Build(); err == nil {
-		t.Fatalf("expected error for empty sort modifier name")
-	}
+		Build()
+	assert.Error(t, err, "expected error for empty sort modifier name")
+	assert.Equal(t, "sort modifier name must be non-empty", err.Error())
 
-	if _, err := NewQuery().
+	_, err = NewQuery().
 		Search("a").
 		Term("b").
 		SortByModifiers("title", cql.Modifier{Name: "", Value: "x"}).
-		Build(); err == nil {
-		t.Fatalf("expected error for empty modifier name")
-	}
+		Build()
+	assert.Error(t, err, "expected error for empty modifier name")
+	assert.Equal(t, "sort modifier name must be non-empty", err.Error())
 
-	if _, err := NewQuery().
+	_, err = NewQuery().
 		Search("a").
 		Term("b").
 		SortByModifiers("title", cql.Modifier{Name: "x", Relation: "bogus"}).
-		Build(); err == nil {
-		t.Fatalf("expected error for invalid modifier relation")
-	}
+		Build()
+	assert.Error(t, err, "expected error for invalid modifier relation")
+	assert.Equal(t, "invalid modifier relation: \"bogus\"", err.Error())
+
+	_, err = NewQuery().
+		Search("a").
+		Term("b").
+		SortByModifiers("", cql.Modifier{Name: "x", Relation: "="}).
+		Build()
+	assert.Error(t, err, "expected error for empty sort index")
+	assert.Equal(t, "sort index must be non-empty", err.Error())
+
 }
 
 func TestBuilderAppendErrors(t *testing.T) {
-	if _, err := NewQuery().
+	_, err := NewQuery().
 		And().
 		Search("a").
 		Term("b").
-		Build(); err == nil {
-		t.Fatalf("expected error when appending without root")
-	}
+		Build()
+	assert.Error(t, err, "cannot append boolean operator without existing root clause")
+	assert.Equal(t, "query requires a root clause before appending", err.Error())
 }
 
 func TestBuilderBeginClauseErrors(t *testing.T) {
@@ -286,60 +249,69 @@ func TestBuilderBeginClauseErrors(t *testing.T) {
 		Term("b").
 		EndClause().
 		Build()
-	if err != nil {
-		t.Fatalf("unexpected error building first root clause: %v", err)
-	}
-
+	assert.NoError(t, err, "unexpected error building first root clause")
 	_, err = qb.
 		BeginClause().
 		Search("c").
 		Term("d").
 		EndClause().
 		Build()
-	if err == nil {
-		t.Fatalf("expected error when starting a second root clause")
-	}
+	assert.Error(t, err, "expected error when starting a second root clause")
+	assert.Equal(t, "query already has a root clause", err.Error())
 }
 
 func TestBuilderJoinModifiersValidation(t *testing.T) {
-	if _, err := NewQuery().
+	_, err := NewQuery().
 		Search("a").
 		Term("b").
 		And().
 		Mod("").
 		Search("c").
 		Term("d").
-		Build(); err == nil {
-		t.Fatalf("expected error for empty boolean modifier name")
-	}
+		Build()
+	assert.Error(t, err, "expected error for empty boolean modifier name")
+	assert.Equal(t, "modifier name must be non-empty", err.Error())
 
-	if _, err := NewQuery().
+	_, err = NewQuery().
+		Search("a").
+		Term("b").
+		And().
+		ModRel("", "bogus", "1").
+		Search("c").
+		Term("d").
+		Build()
+
+	assert.Error(t, err, "expected error for invalid boolean modifier relation")
+	assert.Equal(t, "modifier name must be non-empty", err.Error())
+
+	_, err = NewQuery().
 		Search("a").
 		Term("b").
 		And().
 		ModRel(cql.Distance, "bogus", "1").
 		Search("c").
 		Term("d").
-		Build(); err == nil {
-		t.Fatalf("expected error for invalid boolean modifier relation")
-	}
+		Build()
+
+	assert.Error(t, err, "expected error for invalid boolean modifier relation")
+	assert.Equal(t, "invalid modifier relation: \"bogus\"", err.Error())
 }
 
 func TestBuilderRelationValidation(t *testing.T) {
-	if _, err := NewQuery().
+	_, err := NewQuery().
 		Search("a").
 		Rel("bogus").
 		Term("b").
-		Build(); err == nil {
-		t.Fatalf("expected error for invalid relation")
-	}
+		Build()
+	assert.Error(t, err, "expected error for invalid relation")
+	assert.Equal(t, "invalid relation: \"bogus\"", err.Error())
 }
 
 func TestBuilderEndClauseWithoutStart(t *testing.T) {
 	expr := &ExprBuilder{}
-	if _, err := expr.EndClause().Build(); err == nil {
-		t.Fatalf("expected error for EndClause without BeginClause")
-	}
+	_, err := expr.EndClause().Build()
+	assert.Error(t, err, "expected error for EndClause without BeginClause")
+	assert.Equal(t, "no open clause to end", err.Error())
 }
 
 func TestBuilderMultiplePrefixes(t *testing.T) {
@@ -349,14 +321,9 @@ func TestBuilderMultiplePrefixes(t *testing.T) {
 		Search("dc.title").
 		Term("hello").
 		Build()
-	if err != nil {
-		t.Fatalf("build failed: %v", err)
-	}
-
+	assert.NoError(t, err, "build failed")
 	want := "> dc = \"http://purl.org/dc/elements/1.1/\" > bath = \"http://z3950.org/bath/2.0/\" dc.title = hello"
-	if got := query.String(); got != want {
-		t.Fatalf("unexpected query: got %q want %q", got, want)
-	}
+	assert.Equal(t, want, query.String(), "unexpected query string")
 }
 
 func TestBuilderSortByModifiersEscaping(t *testing.T) {
@@ -365,13 +332,8 @@ func TestBuilderSortByModifiersEscaping(t *testing.T) {
 		Term("hello").
 		SortByModifiers("title", cql.Modifier{Name: "locale", Relation: cql.EQ, Value: "en\"US"}).
 		Build()
-	if err != nil {
-		t.Fatalf("build failed: %v", err)
-	}
-
-	if got, want := query.String(), "title = hello sortBy title/locale=\"en\\\"US\""; got != want {
-		t.Fatalf("unexpected query: got %q want %q", got, want)
-	}
+	assert.NoError(t, err, "build failed")
+	assert.Equal(t, "title = hello sortBy title/locale=\"en\\\"US\"", query.String(), "unexpected query string")
 }
 
 func TestBuilderSortByModifiersDefaultRelation(t *testing.T) {
@@ -380,13 +342,8 @@ func TestBuilderSortByModifiersDefaultRelation(t *testing.T) {
 		Term("hello").
 		SortByModifiers("title", cql.Modifier{Name: "locale", Value: "en_US"}).
 		Build()
-	if err != nil {
-		t.Fatalf("build failed: %v", err)
-	}
-
-	if got, want := query.String(), "title = hello sortBy title/locale=en_US"; got != want {
-		t.Fatalf("unexpected query: got %q want %q", got, want)
-	}
+	assert.NoError(t, err, "build failed")
+	assert.Equal(t, "title = hello sortBy title/locale=en_US", query.String(), "unexpected query string")
 }
 
 func TestBuilderBeginClauseRightHand(t *testing.T) {
@@ -402,13 +359,9 @@ func TestBuilderBeginClauseRightHand(t *testing.T) {
 		Term("c").
 		EndClause().
 		Build()
-	if err != nil {
-		t.Fatalf("build failed: %v", err)
-	}
 
-	if got, want := query.String(), "a = a and (b = b or c = c)"; got != want {
-		t.Fatalf("unexpected query: got %q want %q", got, want)
-	}
+	assert.NoError(t, err, "build failed")
+	assert.Equal(t, "a = a and (b = b or c = c)", query.String(), "unexpected query string")
 }
 
 func TestBuilderSearchModifiers(t *testing.T) {
@@ -419,31 +372,27 @@ func TestBuilderSearchModifiers(t *testing.T) {
 		ModRel(cql.Locale, cql.EQ, "en\"US").
 		Term("hello").
 		Build()
-	if err != nil {
-		t.Fatalf("build failed: %v", err)
-	}
 
-	if got, want := query.String(), "title =/locale/locale=\"en\\\"US\" hello"; got != want {
-		t.Fatalf("unexpected query: got %q want %q", got, want)
-	}
+	assert.NoError(t, err, "build failed")
+	assert.Equal(t, "title =/locale/locale=\"en\\\"US\" hello", query.String(), "unexpected query string")
 }
 
 func TestBuilderSearchModifiersValidation(t *testing.T) {
-	if _, err := NewQuery().
+	_, err := NewQuery().
 		Search("title").
 		Mod("").
 		Term("hello").
-		Build(); err == nil {
-		t.Fatalf("expected error for empty search modifier name")
-	}
+		Build()
+	assert.Error(t, err, "expected error for empty search modifier name")
+	assert.Equal(t, "modifier name must be non-empty", err.Error())
 
-	if _, err := NewQuery().
+	_, err = NewQuery().
 		Search("title").
 		ModRel(cql.Locale, "bogus", "en").
 		Term("hello").
-		Build(); err == nil {
-		t.Fatalf("expected error for invalid search modifier relation")
-	}
+		Build()
+	assert.Error(t, err, "expected error for invalid search modifier relation")
+	assert.Equal(t, "invalid modifier relation: \"bogus\"", err.Error())
 }
 
 func TestBuilderSearchRelationDefaults(t *testing.T) {
@@ -452,13 +401,8 @@ func TestBuilderSearchRelationDefaults(t *testing.T) {
 		Rel("").
 		Term("hello").
 		Build()
-	if err != nil {
-		t.Fatalf("build failed: %v", err)
-	}
-
-	if got, want := query.String(), "title = hello"; got != want {
-		t.Fatalf("unexpected query: got %q want %q", got, want)
-	}
+	assert.NoError(t, err, "build failed")
+	assert.Equal(t, "title = hello", query.String(), "unexpected query string")
 }
 
 func TestBuilderAppendInvalidOperator(t *testing.T) {
@@ -471,21 +415,11 @@ func TestBuilderAppendInvalidOperator(t *testing.T) {
 		left:   expr.clause,
 		op:     "bogus",
 	}
-	query, err := jb.Search("c").Term("d").Build()
-	if err != nil {
-		t.Fatalf("unexpected error for invalid boolean operator: %v", err)
-	}
-	if got, want := query.String(), "a = b"; got != want {
-		t.Fatalf("unexpected query: got %q want %q", got, want)
-	}
+	_, err := jb.Search("c").Term("d").Build()
+	assert.Error(t, err, "expected error for invalid boolean operator")
 }
 
 func TestBuilderEscapeHelpers(t *testing.T) {
-	if got, want := EscapeSpecialChars("a\\b\"c"), "a\\\\b\\\"c"; got != want {
-		t.Fatalf("unexpected EscapeSpecialChars: got %q want %q", got, want)
-	}
-
-	if got, want := EscapeMaskingChars("*?^"), "\\*\\?\\^"; got != want {
-		t.Fatalf("unexpected EscapeMaskingChars: got %q want %q", got, want)
-	}
+	assert.Equal(t, "a\\\\b\\\"c", EscapeSpecialChars("a\\b\"c"), "unexpected EscapeSpecialChars")
+	assert.Equal(t, "\\*\\?\\^", EscapeMaskingChars("*?^"), "unexpected EscapeMaskingChars")
 }
