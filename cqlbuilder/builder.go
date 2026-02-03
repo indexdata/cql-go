@@ -463,7 +463,7 @@ func (sb *SearchBuilder) ModRel(name cql.CqlModifier, rel cql.Relation, value st
 		return sb
 	}
 	if strings.TrimSpace(string(name)) == "" {
-		sb.err = fmt.Errorf("modifier name must be non-empty")
+		sb.err = fmt.Errorf("modifier relation name must be non-empty")
 		return sb
 	}
 	if rel == "" {

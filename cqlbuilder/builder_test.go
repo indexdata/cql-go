@@ -93,9 +93,13 @@ func TestBuilderValidation(t *testing.T) {
 	assert.Error(t, err, "expected error for empty sort index")
 	assert.Equal(t, "sort index must be non-empty", err.Error())
 
-	_, err = NewQuery().Prefix("", "http://example.org/").Build()
+	_, err = NewQuery().Prefix("x", "").Build()
 	assert.Error(t, err, "expected error for empty prefix")
-	assert.Equal(t, "query requires a root clause", err.Error())
+	assert.Equal(t, "prefix uri must be non-empty", err.Error())
+
+	_, err = NewQuery().Prefix("x", "").Prefix("a", "b").SortBy("title").SortByModifiers("asc").Build()
+	assert.Error(t, err, "expected error for empty prefix")
+	assert.Equal(t, "prefix uri must be non-empty", err.Error())
 }
 
 func TestBuilderDuplicateRoot(t *testing.T) {
@@ -135,6 +139,9 @@ func TestBuilderFromString(t *testing.T) {
 	query, err := qb.And().Search("author").Term("alice").Build()
 	assert.NoError(t, err, "build failed")
 	assert.Equal(t, "title = base and author = alice", query.String(), "unexpected query string")
+
+	_, err = NewQueryFromString("a and")
+	assert.Error(t, err, "expected parse failed")
 }
 
 func TestBuilderGroupedClause(t *testing.T) {
@@ -196,6 +203,7 @@ func TestBuilderErrorsAndModifiers(t *testing.T) {
 		SortBy("title", "").
 		Build()
 	assert.Error(t, err, "expected error for empty sort modifier name")
+	assert.Equal(t, "sort modifier name must be non-empty", err.Error())
 
 	_, err = NewQuery().
 		Search("a").
@@ -203,6 +211,7 @@ func TestBuilderErrorsAndModifiers(t *testing.T) {
 		SortByModifiers("title", cql.Modifier{Name: "", Value: "x"}).
 		Build()
 	assert.Error(t, err, "expected error for empty modifier name")
+	assert.Equal(t, "sort modifier name must be non-empty", err.Error())
 
 	_, err = NewQuery().
 		Search("a").
@@ -210,6 +219,16 @@ func TestBuilderErrorsAndModifiers(t *testing.T) {
 		SortByModifiers("title", cql.Modifier{Name: "x", Relation: "bogus"}).
 		Build()
 	assert.Error(t, err, "expected error for invalid modifier relation")
+	assert.Equal(t, "invalid modifier relation: \"bogus\"", err.Error())
+
+	_, err = NewQuery().
+		Search("a").
+		Term("b").
+		SortByModifiers("", cql.Modifier{Name: "x", Relation: "="}).
+		Build()
+	assert.Error(t, err, "expected error for empty sort index")
+	assert.Equal(t, "sort index must be non-empty", err.Error())
+
 }
 
 func TestBuilderAppendErrors(t *testing.T) {
@@ -251,6 +270,18 @@ func TestBuilderJoinModifiersValidation(t *testing.T) {
 		Term("d").
 		Build()
 	assert.Error(t, err, "expected error for empty boolean modifier name")
+	assert.Equal(t, "modifier name must be non-empty", err.Error())
+
+	_, err = NewQuery().
+		Search("a").
+		Term("b").
+		And().
+		ModRel("", "bogus", "1").
+		Search("c").
+		Term("d").
+		Build()
+
+	assert.Error(t, err, "expected error for invalid boolean modifier relation")
 	assert.Equal(t, "modifier name must be non-empty", err.Error())
 
 	_, err = NewQuery().
