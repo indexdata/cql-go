@@ -98,7 +98,7 @@ The pgcql package converts CQL to PostgreSQL.
 CQL, while very limited compared to SQL, gives the ability to offer a subset
 suitable for at least limiting query results.
 
-The procedures is simple. Define the fields is offered once. At run time
+The procedure is simple. Define the fields that are offered once. At run time
 for each incoming query, parse it (for syntax errors, etc) and secondly convert
 the resulting tree to be used with a SQL query.
 
@@ -123,7 +123,7 @@ Now create the definition and add allowed CQL fields:
 
 Handle query and inspect rows
 
-    var string query
+    var query string
 
     var parser cql.Parser
     q, err := parser.Parse(query)
@@ -134,4 +134,4 @@ Handle query and inspect rows
     rows, err = conn.Query(ctx, "SELECT id FROM mytable WHERE "+res.GetWhereClause(), res.GetQueryArguments()...)
     assert.NoErrorf(t, err, "failed to execute query '%s' whereClause='%s'", query, res.GetWhereClause())
     // inspect rows
-    rows.close()
+    rows.Close()
