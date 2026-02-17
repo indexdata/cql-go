@@ -98,7 +98,7 @@ The pgcql package converts CQL to PostgreSQL.
 CQL, while very limited compared to SQL, gives the ability to offer a subset
 suitable for at least limiting query results.
 
-The procedure is simple. Define the fields that are offered once. At run time
+The procedure is simple. First, define which fields are offered. At run time
 for each incoming query, parse it (for syntax errors, etc) and secondly convert
 the resulting tree to be used with a SQL query.
 
