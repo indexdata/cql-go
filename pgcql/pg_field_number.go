@@ -11,6 +11,10 @@ type FieldNumber struct {
 	FieldCommon
 }
 
+func NewFieldNumber() *FieldNumber {
+	return &FieldNumber{}
+}
+
 func (f *FieldNumber) WithColumn(column string) *FieldNumber {
 	f.column = column
 	return f
