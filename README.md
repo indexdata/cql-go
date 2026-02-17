@@ -102,7 +102,7 @@ The procedure is simple. First, define which fields are offered. At run time
 for each incoming query, parse it (for syntax errors, etc) and secondly convert
 the resulting tree to be used with a SQL query.
 
-Example where we define and insert entries to a table by using the `postgres` package:
+Example where we define and insert entries to a table by using the [pgx](https://github.com/jackc/pgx) package:
 
     conn, err := pgx.Connect(ctx, connStr)
     assert.NoError(t, err, "failed to connect to db")
@@ -127,6 +127,7 @@ Handle query and inspect rows
     var parser cql.Parser
     q, err := parser.Parse(query)
     assert.NoError(t, err, "parse of query failed")
+    // create the SQL filter, where makes the query use $1 as first argument
     res, err := def.Parse(q, 1)
     assert.NoError(t, err, "pgcql conversion failed")
     var rows pgx.Rows
