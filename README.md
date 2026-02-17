@@ -108,9 +108,8 @@ Example where we define and insert entries to a table by using the `postgres` pa
     assert.NoError(t, err, "failed to connect to db")
     _, err = conn.Exec(ctx, "CREATE TABLE mytable (title TEXT, year INT, address JSONB)")
     assert.NoError(t, err, "failed to create mytable")
-    _, err = conn.Query(ctx, "INSERT INTO mytable (title, year, address) "+
-        "VALUES ($1, $2, $3)", "the art of computer programming, volume 1", 1968, "+
-        "`{"city": "Reading", "country": "USA", "zip": 19601}`)
+    _, err = conn.Query(ctx, "INSERT INTO mytable (title, year, address) "VALUES ($1, $2, $3)",
+        "the art of computer programming", 1968, `{"city": "Reading", "country": "USA", "zip": 19601}`)
     assert.NoError(t, err, "failed to insert")
 
 Now create the definition and add allowed CQL fields:

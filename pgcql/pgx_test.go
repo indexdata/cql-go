@@ -60,17 +60,20 @@ func TestPgx(t *testing.T) {
 	var rows pgx.Rows
 
 	rows, err = conn.Query(ctx, "INSERT INTO mytable (title, author, tag, year, address) "+
-		"VALUES ($1, $2, $3, $4, $5)", "the art of computer programming, volume 1", "donald e. knuth", "tag1", 1968, `{"city": "Reading", "country": "USA", "zip": 19601}`)
+		"VALUES ($1, $2, $3, $4, $5)", "the art of computer programming, volume 1", "donald e. knuth", "tag1", 1968,
+		`{"city": "Reading", "country": "USA", "zip": 19601}`)
 	assert.NoError(t, err, "failed to insert data")
 	rows.Close()
 
 	rows, err = conn.Query(ctx, "INSERT INTO mytable (title, author, tag, year, address) "+
-		"VALUES ($1, $2, $3, $4, $5)", "the TeXbook", "d. e. knuth", "tag2", 1984, `{"city": "Stanford", "country": "USA", "zip": 67890}`)
+		"VALUES ($1, $2, $3, $4, $5)", "the TeXbook", "d. e. knuth", "tag2", 1984,
+		`{"city": "Stanford", "country": "USA", "zip": 67890}`)
 	assert.NoError(t, err, "failed to insert data")
 	rows.Close()
 
 	rows, err = conn.Query(ctx, "INSERT INTO mytable (title, year, address) "+
-		"VALUES ($1, $2, $3)", "anonymous' list", 2025, `{"city": "Unknown", "country": "Unknown"}`)
+		"VALUES ($1, $2, $3)", "anonymous' list", 2025,
+		`{"city": "Unknown", "country": "Unknown"}`)
 	assert.NoError(t, err, "failed to insert data")
 	rows.Close()
 
