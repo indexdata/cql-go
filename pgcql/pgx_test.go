@@ -59,15 +59,18 @@ func TestPgx(t *testing.T) {
 
 	var rows pgx.Rows
 
-	rows, err = conn.Query(ctx, "INSERT INTO mytable (title, author, tag, year, address) VALUES ($1, $2, $3, $4, $5)", "the art of computer programming, volume 1", "donald e. knuth", "tag1", 1968, `{"city": "Reading", "country": "USA", "zip": 19601}`)
+	rows, err = conn.Query(ctx, "INSERT INTO mytable (title, author, tag, year, address) "+
+		"VALUES ($1, $2, $3, $4, $5)", "the art of computer programming, volume 1", "donald e. knuth", "tag1", 1968, `{"city": "Reading", "country": "USA", "zip": 19601}`)
 	assert.NoError(t, err, "failed to insert data")
 	rows.Close()
 
-	rows, err = conn.Query(ctx, "INSERT INTO mytable (title, author, tag, year, address) VALUES ($1, $2, $3, $4, $5)", "the TeXbook", "d. e. knuth", "tag2", 1984, `{"city": "Stanford", "country": "USA", "zip": 67890}`)
+	rows, err = conn.Query(ctx, "INSERT INTO mytable (title, author, tag, year, address) "+
+		"VALUES ($1, $2, $3, $4, $5)", "the TeXbook", "d. e. knuth", "tag2", 1984, `{"city": "Stanford", "country": "USA", "zip": 67890}`)
 	assert.NoError(t, err, "failed to insert data")
 	rows.Close()
 
-	rows, err = conn.Query(ctx, "INSERT INTO mytable (title, year, address) VALUES ($1, $2, $3)", "anonymous' list", 2025, `{"city": "Unknown", "country": "Unknown"}`)
+	rows, err = conn.Query(ctx, "INSERT INTO mytable (title, year, address) "+
+		"VALUES ($1, $2, $3)", "anonymous' list", 2025, `{"city": "Unknown", "country": "Unknown"}`)
 	assert.NoError(t, err, "failed to insert data")
 	rows.Close()
 
@@ -78,7 +81,7 @@ func TestPgx(t *testing.T) {
 		def.AddField("author", (&FieldString{}).WithExact())
 		def.AddField("year", (&FieldNumber{}))
 		def.AddField("tag", (&FieldString{}).WithSplit())
-		def.AddField("city", (&FieldString{}).WithExact().WithColumn("address->>'city'"))
+		def.AddField("city", (&FieldString{}).WithLikeOps().WithColumn("address->>'city'"))
 		def.AddField("country", (&FieldString{}).WithExact().WithColumn("address->>'country'"))
 		def.AddField("zip", (&FieldNumber{}).WithColumn("address->'zip'"))
 		def.AddField("zip2", (&FieldNumber{}).WithColumn("(address->'zip')::numeric"))
@@ -94,6 +97,7 @@ func TestPgx(t *testing.T) {
 			{"title = \"\"", []int{1, 2, 3}},
 			{"author = \"\"", []int{1, 2}},
 			{"title = \"the art of computer programming, volume 1\"", []int{1}},
+			{"title = \"the art of computer programming, volume\"", []int{}},
 			{"author = \"d. e. knuth\"", []int{2}},
 			{"author = \"donald e. knuth\"", []int{1}},
 			{"title = \"the TeXbook\" AND author = \"d. e. knuth\"", []int{2}},
@@ -117,6 +121,7 @@ func TestPgx(t *testing.T) {
 			{"tag any \"tag1 tag2 tag3\"", []int{1, 2}},
 			{"city = \"Reading\"", []int{1}},
 			{"city = \"Stanford\"", []int{2}},
+			{"city = \"Stan*\"", []int{2}},
 			{"city = \"Unknown\"", []int{3}},
 			{"country = \"USA\"", []int{1, 2}},
 			{"country = \"Unknown\"", []int{3}},
