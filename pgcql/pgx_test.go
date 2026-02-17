@@ -77,14 +77,14 @@ func TestPgx(t *testing.T) {
 	t.Run("exact ops", func(t *testing.T) {
 		def := NewPgDefinition()
 
-		def.AddField("title", (&FieldString{}).WithExact())
-		def.AddField("author", (&FieldString{}).WithExact())
-		def.AddField("year", (&FieldNumber{}))
-		def.AddField("tag", (&FieldString{}).WithSplit())
-		def.AddField("city", (&FieldString{}).WithLikeOps().WithColumn("address->>'city'"))
-		def.AddField("country", (&FieldString{}).WithExact().WithColumn("address->>'country'"))
-		def.AddField("zip", (&FieldNumber{}).WithColumn("address->'zip'"))
-		def.AddField("zip2", (&FieldNumber{}).WithColumn("(address->'zip')::numeric"))
+		def.AddField("title", NewFieldString().WithExact())
+		def.AddField("author", NewFieldString().WithExact())
+		def.AddField("year", NewFieldNumber())
+		def.AddField("tag", NewFieldString().WithSplit())
+		def.AddField("city", NewFieldString().WithLikeOps().WithColumn("address->>'city'"))
+		def.AddField("country", NewFieldString().WithExact().WithColumn("address->>'country'"))
+		def.AddField("zip", NewFieldNumber().WithColumn("address->'zip'"))
+		def.AddField("zip2", NewFieldNumber().WithColumn("(address->'zip')::numeric"))
 
 		var parser cql.Parser
 		for _, testcase := range []struct {
@@ -138,9 +138,9 @@ func TestPgx(t *testing.T) {
 	t.Run("like ops", func(t *testing.T) {
 		def := NewPgDefinition()
 
-		def.AddField("title", (&FieldString{}).WithLikeOps())
-		def.AddField("author", (&FieldString{}).WithLikeOps())
-		def.AddField("year", (&FieldNumber{}))
+		def.AddField("title", NewFieldString().WithLikeOps())
+		def.AddField("author", NewFieldString().WithLikeOps())
+		def.AddField("year", NewFieldNumber())
 
 		var parser cql.Parser
 		for _, testcase := range []struct {
@@ -158,9 +158,9 @@ func TestPgx(t *testing.T) {
 	t.Run("fulltext ops", func(t *testing.T) {
 		def := NewPgDefinition()
 
-		def.AddField("title", (&FieldString{}).WithFullText("simple"))
-		def.AddField("author", (&FieldString{}).WithFullText(""))
-		def.AddField("year", (&FieldNumber{}))
+		def.AddField("title", NewFieldString().WithFullText("simple"))
+		def.AddField("author", NewFieldString().WithFullText(""))
+		def.AddField("year", NewFieldNumber())
 
 		var parser cql.Parser
 		for _, testcase := range []struct {
