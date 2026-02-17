@@ -84,7 +84,7 @@ func TestPgx(t *testing.T) {
 		def.AddField("author", NewFieldString().WithExact())
 		def.AddField("year", NewFieldNumber())
 		def.AddField("tag", NewFieldString().WithSplit())
-		def.AddField("city", NewFieldString().WithLikeOps().WithColumn("address->>'city'"))
+		def.AddField("city", NewFieldString().WithExact().WithColumn("address->>'city'"))
 		def.AddField("country", NewFieldString().WithExact().WithColumn("address->>'country'"))
 		def.AddField("zip", NewFieldNumber().WithColumn("address->'zip'"))
 		def.AddField("zip2", NewFieldNumber().WithColumn("(address->'zip')::numeric"))
@@ -124,7 +124,6 @@ func TestPgx(t *testing.T) {
 			{"tag any \"tag1 tag2 tag3\"", []int{1, 2}},
 			{"city = \"Reading\"", []int{1}},
 			{"city = \"Stanford\"", []int{2}},
-			{"city = \"Stan*\"", []int{2}},
 			{"city = \"Unknown\"", []int{3}},
 			{"country = \"USA\"", []int{1, 2}},
 			{"country = \"Unknown\"", []int{3}},
@@ -144,6 +143,7 @@ func TestPgx(t *testing.T) {
 		def.AddField("title", NewFieldString().WithLikeOps())
 		def.AddField("author", NewFieldString().WithLikeOps())
 		def.AddField("year", NewFieldNumber())
+		def.AddField("city", NewFieldString().WithLikeOps().WithColumn("address->>'city'"))
 
 		var parser cql.Parser
 		for _, testcase := range []struct {
@@ -153,6 +153,8 @@ func TestPgx(t *testing.T) {
 			{"title = \"the TeX*\"", []int{2}},
 			{"title = \"the Te?book\"", []int{2}},
 			{"title = \"anonymous' l*\"", []int{3}},
+			{"city = \"Read*\"", []int{1}},
+			{"city = \"reading\"", []int{}},
 		} {
 			runQuery(t, parser, conn, ctx, def, testcase.query, testcase.expectedIds)
 		}
@@ -164,6 +166,7 @@ func TestPgx(t *testing.T) {
 		def.AddField("title", NewFieldString().WithFullText("simple"))
 		def.AddField("author", NewFieldString().WithFullText(""))
 		def.AddField("year", NewFieldNumber())
+		def.AddField("city", NewFieldString().WithFullText("").WithColumn("address->>'city'"))
 
 		var parser cql.Parser
 		for _, testcase := range []struct {
@@ -179,6 +182,8 @@ func TestPgx(t *testing.T) {
 			{"author adj \"d e knuth\"", []int{2}},
 			{"author adj \"e knuth\"", []int{1, 2}},
 			{"author adj \"e d knuth\"", []int{}},
+			{"city = \"Reading\"", []int{1}},
+			{"city = \"reading\"", []int{1}},
 		} {
 			runQuery(t, parser, conn, ctx, def, testcase.query, testcase.expectedIds)
 		}
