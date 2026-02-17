@@ -54,20 +54,20 @@ func TestPgx(t *testing.T) {
 		err := conn.Close(ctx)
 		assert.NoError(t, err, "failed to close db connection")
 	}()
-	_, err = conn.Exec(ctx, "CREATE TABLE mytable (id SERIAL PRIMARY KEY, title TEXT, author TEXT, tag TEXT, year INT)")
+	_, err = conn.Exec(ctx, "CREATE TABLE mytable (id SERIAL PRIMARY KEY, title TEXT, author TEXT, tag TEXT, year INT, address JSONB)")
 	assert.NoError(t, err, "failed to create mytable")
 
 	var rows pgx.Rows
 
-	rows, err = conn.Query(ctx, "INSERT INTO mytable (title, author, tag, year) VALUES ($1, $2, $3, $4)", "the art of computer programming, volume 1", "donald e. knuth", "tag1", 1968)
+	rows, err = conn.Query(ctx, "INSERT INTO mytable (title, author, tag, year, address) VALUES ($1, $2, $3, $4, $5)", "the art of computer programming, volume 1", "donald e. knuth", "tag1", 1968, `{"city": "Reading", "country": "USA", "zip": 19601}`)
 	assert.NoError(t, err, "failed to insert data")
 	rows.Close()
 
-	rows, err = conn.Query(ctx, "INSERT INTO mytable (title, author, tag, year) VALUES ($1, $2, $3, $4)", "the TeXbook", "d. e. knuth", "tag2", 1984)
+	rows, err = conn.Query(ctx, "INSERT INTO mytable (title, author, tag, year, address) VALUES ($1, $2, $3, $4, $5)", "the TeXbook", "d. e. knuth", "tag2", 1984, `{"city": "Stanford", "country": "USA", "zip": 67890}`)
 	assert.NoError(t, err, "failed to insert data")
 	rows.Close()
 
-	rows, err = conn.Query(ctx, "INSERT INTO mytable (title, year) VALUES ($1, $2)", "anonymous' list", 2025)
+	rows, err = conn.Query(ctx, "INSERT INTO mytable (title, year, address) VALUES ($1, $2, $3)", "anonymous' list", 2025, `{"city": "Unknown", "country": "Unknown"}`)
 	assert.NoError(t, err, "failed to insert data")
 	rows.Close()
 
@@ -78,6 +78,10 @@ func TestPgx(t *testing.T) {
 		def.AddField("author", (&FieldString{}).WithExact())
 		def.AddField("year", (&FieldNumber{}))
 		def.AddField("tag", (&FieldString{}).WithSplit())
+		def.AddField("city", (&FieldString{}).WithExact().WithColumn("address->>'city'"))
+		def.AddField("country", (&FieldString{}).WithExact().WithColumn("address->>'country'"))
+		def.AddField("zip", (&FieldNumber{}).WithColumn("address->'zip'"))
+		def.AddField("zip2", (&FieldNumber{}).WithColumn("(address->'zip')::numeric"))
 
 		var parser cql.Parser
 		for _, testcase := range []struct {
@@ -111,6 +115,16 @@ func TestPgx(t *testing.T) {
 			{"tag any \"tag1\"", []int{1}},
 			{"tag <> \"tag1\"", []int{2}},
 			{"tag any \"tag1 tag2 tag3\"", []int{1, 2}},
+			{"city = \"Reading\"", []int{1}},
+			{"city = \"Stanford\"", []int{2}},
+			{"city = \"Unknown\"", []int{3}},
+			{"country = \"USA\"", []int{1, 2}},
+			{"country = \"Unknown\"", []int{3}},
+			{"zip = 19601", []int{1}},
+			{"zip = 67890", []int{2}},
+			{"zip >= 0", []int{1, 2}},
+			{"zip = \"\"", []int{1, 2}},
+			{"zip2 = 19601", []int{1}},
 		} {
 			runQuery(t, parser, conn, ctx, def, testcase.query, testcase.expectedIds)
 		}

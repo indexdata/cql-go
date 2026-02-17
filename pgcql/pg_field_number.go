@@ -11,6 +11,11 @@ type FieldNumber struct {
 	FieldCommon
 }
 
+func (f *FieldNumber) WithColumn(column string) *FieldNumber {
+	f.column = column
+	return f
+}
+
 func (f *FieldNumber) Generate(sc cql.SearchClause, queryArgumentIndex int) (string, []any, error) {
 	s := f.handleEmptyTerm(sc)
 	if s != "" {
