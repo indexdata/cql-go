@@ -54,30 +54,40 @@ func TestPgx(t *testing.T) {
 		err := conn.Close(ctx)
 		assert.NoError(t, err, "failed to close db connection")
 	}()
-	_, err = conn.Exec(ctx, "CREATE TABLE mytable (id SERIAL PRIMARY KEY, title TEXT, author TEXT, tag TEXT, year INT)")
+	_, err = conn.Exec(ctx, "CREATE TABLE mytable (id SERIAL PRIMARY KEY, title TEXT, author TEXT, tag TEXT, year INT, address JSONB)")
 	assert.NoError(t, err, "failed to create mytable")
 
 	var rows pgx.Rows
 
-	rows, err = conn.Query(ctx, "INSERT INTO mytable (title, author, tag, year) VALUES ($1, $2, $3, $4)", "the art of computer programming, volume 1", "donald e. knuth", "tag1", 1968)
+	rows, err = conn.Query(ctx, "INSERT INTO mytable (title, author, tag, year, address) "+
+		"VALUES ($1, $2, $3, $4, $5)", "the art of computer programming, volume 1", "donald e. knuth", "tag1", 1968,
+		`{"city": "Reading", "country": "USA", "zip": 19601}`)
 	assert.NoError(t, err, "failed to insert data")
 	rows.Close()
 
-	rows, err = conn.Query(ctx, "INSERT INTO mytable (title, author, tag, year) VALUES ($1, $2, $3, $4)", "the TeXbook", "d. e. knuth", "tag2", 1984)
+	rows, err = conn.Query(ctx, "INSERT INTO mytable (title, author, tag, year, address) "+
+		"VALUES ($1, $2, $3, $4, $5)", "the TeXbook", "d. e. knuth", "tag2", 1984,
+		`{"city": "Stanford", "country": "USA", "zip": 67890}`)
 	assert.NoError(t, err, "failed to insert data")
 	rows.Close()
 
-	rows, err = conn.Query(ctx, "INSERT INTO mytable (title, year) VALUES ($1, $2)", "anonymous' list", 2025)
+	rows, err = conn.Query(ctx, "INSERT INTO mytable (title, year, address) "+
+		"VALUES ($1, $2, $3)", "anonymous' list", 2025,
+		`{"city": "Unknown", "country": "Unknown"}`)
 	assert.NoError(t, err, "failed to insert data")
 	rows.Close()
 
 	t.Run("exact ops", func(t *testing.T) {
 		def := NewPgDefinition()
 
-		def.AddField("title", (&FieldString{}).WithExact())
-		def.AddField("author", (&FieldString{}).WithExact())
-		def.AddField("year", (&FieldNumber{}))
-		def.AddField("tag", (&FieldString{}).WithSplit())
+		def.AddField("title", NewFieldString().WithExact())
+		def.AddField("author", NewFieldString().WithExact())
+		def.AddField("year", NewFieldNumber())
+		def.AddField("tag", NewFieldString().WithSplit())
+		def.AddField("city", NewFieldString().WithExact().WithColumn("address->>'city'"))
+		def.AddField("country", NewFieldString().WithExact().WithColumn("address->>'country'"))
+		def.AddField("zip", NewFieldNumber().WithColumn("address->'zip'"))
+		def.AddField("zip2", NewFieldNumber().WithColumn("(address->'zip')::numeric"))
 
 		var parser cql.Parser
 		for _, testcase := range []struct {
@@ -90,6 +100,7 @@ func TestPgx(t *testing.T) {
 			{"title = \"\"", []int{1, 2, 3}},
 			{"author = \"\"", []int{1, 2}},
 			{"title = \"the art of computer programming, volume 1\"", []int{1}},
+			{"title = \"the art of computer programming, volume\"", []int{}},
 			{"author = \"d. e. knuth\"", []int{2}},
 			{"author = \"donald e. knuth\"", []int{1}},
 			{"title = \"the TeXbook\" AND author = \"d. e. knuth\"", []int{2}},
@@ -111,6 +122,16 @@ func TestPgx(t *testing.T) {
 			{"tag any \"tag1\"", []int{1}},
 			{"tag <> \"tag1\"", []int{2}},
 			{"tag any \"tag1 tag2 tag3\"", []int{1, 2}},
+			{"city = \"Reading\"", []int{1}},
+			{"city = \"Stanford\"", []int{2}},
+			{"city = \"Unknown\"", []int{3}},
+			{"country = \"USA\"", []int{1, 2}},
+			{"country = \"Unknown\"", []int{3}},
+			{"zip = 19601", []int{1}},
+			{"zip = 67890", []int{2}},
+			{"zip >= 0", []int{1, 2}},
+			{"zip = \"\"", []int{1, 2}},
+			{"zip2 = 19601", []int{1}},
 		} {
 			runQuery(t, parser, conn, ctx, def, testcase.query, testcase.expectedIds)
 		}
@@ -119,9 +140,10 @@ func TestPgx(t *testing.T) {
 	t.Run("like ops", func(t *testing.T) {
 		def := NewPgDefinition()
 
-		def.AddField("title", (&FieldString{}).WithLikeOps())
-		def.AddField("author", (&FieldString{}).WithLikeOps())
-		def.AddField("year", (&FieldNumber{}))
+		def.AddField("title", NewFieldString().WithLikeOps())
+		def.AddField("author", NewFieldString().WithLikeOps())
+		def.AddField("year", NewFieldNumber())
+		def.AddField("city", NewFieldString().WithLikeOps().WithColumn("address->>'city'"))
 
 		var parser cql.Parser
 		for _, testcase := range []struct {
@@ -131,6 +153,8 @@ func TestPgx(t *testing.T) {
 			{"title = \"the TeX*\"", []int{2}},
 			{"title = \"the Te?book\"", []int{2}},
 			{"title = \"anonymous' l*\"", []int{3}},
+			{"city = \"Read*\"", []int{1}},
+			{"city = \"reading\"", []int{}},
 		} {
 			runQuery(t, parser, conn, ctx, def, testcase.query, testcase.expectedIds)
 		}
@@ -139,9 +163,10 @@ func TestPgx(t *testing.T) {
 	t.Run("fulltext ops", func(t *testing.T) {
 		def := NewPgDefinition()
 
-		def.AddField("title", (&FieldString{}).WithFullText("simple"))
-		def.AddField("author", (&FieldString{}).WithFullText(""))
-		def.AddField("year", (&FieldNumber{}))
+		def.AddField("title", NewFieldString().WithFullText("simple"))
+		def.AddField("author", NewFieldString().WithFullText(""))
+		def.AddField("year", NewFieldNumber())
+		def.AddField("city", NewFieldString().WithFullText("").WithColumn("address->>'city'"))
 
 		var parser cql.Parser
 		for _, testcase := range []struct {
@@ -157,6 +182,8 @@ func TestPgx(t *testing.T) {
 			{"author adj \"d e knuth\"", []int{2}},
 			{"author adj \"e knuth\"", []int{1, 2}},
 			{"author adj \"e d knuth\"", []int{}},
+			{"city = \"Reading\"", []int{1}},
+			{"city = \"reading\"", []int{1}},
 		} {
 			runQuery(t, parser, conn, ctx, def, testcase.query, testcase.expectedIds)
 		}

@@ -40,7 +40,7 @@ func TestParsing(t *testing.T) {
 
 	def.AddField("title", title).AddField("author", author).AddField("cql.serverChoice", serverChoice).AddField("full", full).AddField("tag", tag)
 
-	price := &FieldNumber{}
+	price := NewFieldNumber()
 	def.AddField("price", price)
 
 	for _, testcase := range []struct {

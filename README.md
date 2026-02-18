@@ -91,3 +91,47 @@ by assuming that a relation is either:
    Note that, effectively, any term on the second position is considered a relation when a custom default context is declared.
 
 These rules are applied in both the non-strict (default) and strict parsing modes.
+
+# PGCQL
+
+The pgcql package converts CQL to PostgreSQL.
+CQL, while very limited compared to SQL, gives the ability to offer a subset
+suitable for at least limiting query results.
+
+The procedure is simple. First, define which fields are offered. At run time
+for each incoming query, parse it (for syntax errors, etc) and secondly convert
+the resulting tree to be used with a SQL query.
+
+Example where we define and insert entries to a table by using the [pgx](https://github.com/jackc/pgx) package:
+
+    conn, err := pgx.Connect(ctx, connStr)
+    assert.NoError(t, err, "failed to connect to db")
+    _, err = conn.Exec(ctx, "CREATE TABLE mytable (title TEXT, year INT, address JSONB)")
+    assert.NoError(t, err, "failed to create mytable")
+    _, err = conn.Query(ctx, "INSERT INTO mytable (title, year, address) "VALUES ($1, $2, $3)",
+        "the art of computer programming", 1968, `{"city": "Reading", "country": "USA", "zip": 19601}`)
+    assert.NoError(t, err, "failed to insert")
+
+Now create the definition and add allowed CQL fields:
+
+    def := pgcql.NewPgDefinition()
+
+    def.AddField("title", pgcql.NewFieldString().WithExact())
+    def.AddField("year", pgcql.NewFieldNumber())
+    def.AddField("city", pgcql.NewFieldString().WithOps().WithColumn("address->>'city'"))
+
+Handle query and inspect rows
+
+    var query string
+
+    var parser cql.Parser
+    q, err := parser.Parse(query)
+    assert.NoError(t, err, "parse of query failed")
+    // create the SQL filter, where makes the query use $1 as first argument
+    res, err := def.Parse(q, 1)
+    assert.NoError(t, err, "pgcql conversion failed")
+    var rows pgx.Rows
+    rows, err = conn.Query(ctx, "SELECT id FROM mytable WHERE "+res.GetWhereClause(), res.GetQueryArguments()...)
+    assert.NoErrorf(t, err, "failed to execute query '%s' whereClause='%s'", query, res.GetWhereClause())
+    // inspect rows
+    rows.Close()
