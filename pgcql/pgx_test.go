@@ -183,6 +183,8 @@ func TestPgx(t *testing.T) {
 			{"author adj \"d e knuth\"", []int{2}},
 			{"author adj \"e knuth\"", []int{1, 2}},
 			{"author adj \"e d knuth\"", []int{}},
+			{"author any \"e f\"", []int{1, 2}},
+			{"author adj \"e | f\"", []int{}},
 			{"city = \"Reading\"", []int{1}},
 			{"city = \"reading\"", []int{1}},
 			{"address = USA", []int{1, 2}},
@@ -192,6 +194,7 @@ func TestPgx(t *testing.T) {
 			{"address = \"unknown country\"", []int{3}},
 			{"address = \"country unknown\"", []int{}},
 			{"address adj \"unknown country\"", []int{3}},
+			{"address any \"unknown reading\"", []int{1, 3}},
 		} {
 			runQuery(t, parser, conn, ctx, def, testcase.query, testcase.expectedIds)
 		}
