@@ -73,7 +73,7 @@ func TestPgx(t *testing.T) {
 
 	rows, err = conn.Query(ctx, "INSERT INTO mytable (title, year, address) "+
 		"VALUES ($1, $2, $3)", "anonymous' list", 2025,
-		`{"city": "Unknown", "country": "Unknown"}`)
+		`{"city": "Unknown", "country": "Unknown country"}`)
 	assert.NoError(t, err, "failed to insert data")
 	rows.Close()
 
@@ -126,7 +126,7 @@ func TestPgx(t *testing.T) {
 			{"city = \"Stanford\"", []int{2}},
 			{"city = \"Unknown\"", []int{3}},
 			{"country = \"USA\"", []int{1, 2}},
-			{"country = \"Unknown\"", []int{3}},
+			{"country = \"Unknown country\"", []int{3}},
 			{"zip = 19601", []int{1}},
 			{"zip = 67890", []int{2}},
 			{"zip >= 0", []int{1, 2}},
@@ -167,6 +167,7 @@ func TestPgx(t *testing.T) {
 		def.AddField("author", NewFieldString().WithFullText(""))
 		def.AddField("year", NewFieldNumber())
 		def.AddField("city", NewFieldString().WithFullText("").WithColumn("address->>'city'"))
+		def.AddField("address", NewFieldString().WithFullText("").WithColumn("address"))
 
 		var parser cql.Parser
 		for _, testcase := range []struct {
@@ -184,6 +185,13 @@ func TestPgx(t *testing.T) {
 			{"author adj \"e d knuth\"", []int{}},
 			{"city = \"Reading\"", []int{1}},
 			{"city = \"reading\"", []int{1}},
+			{"address = USA", []int{1, 2}},
+			{"address all \"Reading USA\"", []int{1}},
+			{"address all \"usa reading\"", []int{1}},
+			{"address all \"usa 1984\"", []int{}},
+			{"address = \"unknown country\"", []int{3}},
+			{"address = \"country unknown\"", []int{}},
+			{"address adj \"unknown country\"", []int{3}},
 		} {
 			runQuery(t, parser, conn, ctx, def, testcase.query, testcase.expectedIds)
 		}
