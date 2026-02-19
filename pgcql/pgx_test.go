@@ -187,6 +187,8 @@ func TestPgx(t *testing.T) {
 			{"city = \"reading\"", []int{1}},
 			{"address = USA", []int{1, 2}},
 			{"address all \"Reading USA\"", []int{1}},
+			{"address all \"usa reading\"", []int{1}},
+			{"address all \"usa 1984\"", []int{}},
 			{"address = \"unknown country\"", []int{3}},
 			{"address adj \"unknown country\"", []int{3}},
 		} {
