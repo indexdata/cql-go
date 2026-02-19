@@ -88,6 +88,7 @@ func TestParsing(t *testing.T) {
 		{"title=\"a\\^\"", "Title = $1", []any{"a^"}},
 		{"title=\"a\\", "error: a CQL string must not end with a masking backslash", nil},
 		{"title=\"a\\x\"", "error: a masking backslash in a CQL string must be followed by *, ?, ^, \" or \\", nil},
+		{"full = abc", "to_tsvector('english', full) @@ to_tsquery('english', $1)", []any{"'abc'"}},
 		{"full = \"abc\"", "to_tsvector('english', full) @@ to_tsquery('english', $1)", []any{"'abc'"}},
 		{"full = \"abc \"", "to_tsvector('english', full) @@ to_tsquery('english', $1)", []any{"'abc'"}},
 		{"full adj \"a b\"", "to_tsvector('english', full) @@ to_tsquery('english', $1)", []any{"'a'<->'b'"}},
