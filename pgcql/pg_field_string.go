@@ -96,7 +96,9 @@ func maskedSplit(cqlTerm string, splitChars string) ([]string, error) {
 	if backslash {
 		return terms, fmt.Errorf("a CQL string must not end with a masking backslash")
 	}
-	terms = append(terms, string(pgTerm))
+	if len(pgTerm) > 0 || len(terms) == 0 {
+		terms = append(terms, string(pgTerm))
+	}
 	return terms, nil
 }
 
@@ -148,13 +150,16 @@ func (f *FieldString) handleEmptyTerm(sc cql.SearchClause) string {
 	return ""
 }
 
-func (f *FieldString) generateFullText(sc cql.SearchClause, queryArgumentIndex int, pgfunc string) (string, []any, error) {
-	pgTerm, err := maskedExact(sc.Term)
+func (f *FieldString) generateTsQuery(sc cql.SearchClause, termOp string, queryArgumentIndex int) (string, []any, error) {
+	pgTerms, err := maskedSplit(sc.Term, " ")
 	if err != nil {
 		return "", nil, err
 	}
-	sql := "to_tsvector('" + f.language + "', " + f.column + ") @@ " + pgfunc + "('" + f.language + "', " + fmt.Sprintf("$%d", queryArgumentIndex) + ")"
-	return sql, []any{pgTerm}, nil
+	for i, v := range pgTerms {
+		pgTerms[i] = "'" + strings.ReplaceAll(v, "'", "''") + "'"
+	}
+	sql := "to_tsvector('" + f.language + "', " + f.column + ") @@ to_tsquery('" + f.language + "', " + fmt.Sprintf("$%d", queryArgumentIndex) + ")"
+	return sql, []any{strings.Join(pgTerms, termOp)}, nil
 }
 
 func (f *FieldString) generateIn(sc cql.SearchClause, queryArgumentIndex int, not bool) (string, []any, error) {
@@ -188,9 +193,11 @@ func (f *FieldString) Generate(sc cql.SearchClause, queryArgumentIndex int) (str
 	if fulltext {
 		switch sc.Relation {
 		case cql.ADJ, cql.EQ:
-			return f.generateFullText(sc, queryArgumentIndex, "phraseto_tsquery")
+			return f.generateTsQuery(sc, "<->", queryArgumentIndex)
 		case cql.ALL:
-			return f.generateFullText(sc, queryArgumentIndex, "plainto_tsquery")
+			return f.generateTsQuery(sc, "&", queryArgumentIndex)
+		case cql.ANY:
+			return f.generateTsQuery(sc, "|", queryArgumentIndex)
 		}
 	}
 	if f.enableSplit {
