@@ -190,6 +190,7 @@ func TestPgx(t *testing.T) {
 			{"address all \"usa reading\"", []int{1}},
 			{"address all \"usa 1984\"", []int{}},
 			{"address = \"unknown country\"", []int{3}},
+			{"address = \"country unknown\"", []int{}},
 			{"address adj \"unknown country\"", []int{3}},
 		} {
 			runQuery(t, parser, conn, ctx, def, testcase.query, testcase.expectedIds)
