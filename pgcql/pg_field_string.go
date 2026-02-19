@@ -96,7 +96,9 @@ func maskedSplit(cqlTerm string, splitChars string) ([]string, error) {
 	if backslash {
 		return terms, fmt.Errorf("a CQL string must not end with a masking backslash")
 	}
-	terms = append(terms, string(pgTerm))
+	if len(pgTerm) > 0 {
+		terms = append(terms, string(pgTerm))
+	}
 	return terms, nil
 }
 
