@@ -118,7 +118,7 @@ Now create the definition and add allowed CQL fields:
 
     def.AddField("title", pgcql.NewFieldString().WithExact())
     def.AddField("year", pgcql.NewFieldNumber())
-    def.AddField("city", pgcql.NewFieldString().WithOps().WithColumn("address->>'city'"))
+    def.AddField("city", pgcql.NewFieldString().WithLikeOps().WithColumn("address->>'city'"))
 
 Handle query and inspect rows
 
