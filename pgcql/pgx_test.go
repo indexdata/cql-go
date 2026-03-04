@@ -200,6 +200,27 @@ func TestPgx(t *testing.T) {
 		}
 	})
 
+	t.Run("combo ops", func(t *testing.T) {
+		def := NewPgDefinition()
+
+		titleFull := NewFieldString().WithFullText("simple").WithColumn("title")
+		authorFull := NewFieldString().WithFullText("simple").WithColumn("author")
+		def.AddField("cql.serverChoice", NewFieldCombo(false, []Field{titleFull, authorFull}))
+
+		var parser cql.Parser
+		for _, testcase := range []struct {
+			query       string
+			expectedIds []int
+		}{
+			{"\"the TeXbook\"", []int{2}},
+			{"\"knuth\"", []int{1, 2}},
+			{"\"knuth texbook\"", []int{}},
+			{"knuth texbook", []int{}},
+		} {
+			runQuery(t, parser, conn, ctx, def, testcase.query, testcase.expectedIds)
+		}
+	})
+
 	err = pgContainer.Terminate(ctx)
 	assert.NoError(t, err, "failed to stop db container")
 }

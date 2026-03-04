@@ -30,15 +30,21 @@ func TestParsing(t *testing.T) {
 	author := NewFieldString().WithLikeOps().WithColumn("Author")
 
 	tag := &FieldString{}
-	tag.WithSplit().SetColumn("Tag")
-
-	serverChoice := &FieldString{}
-	serverChoice.WithExact().SetColumn("T")
+	tag.WithSplit().WithExact().SetColumn("T")
 
 	full := &FieldString{}
 	full.WithFullText("english")
 
-	def.AddField("title", title).AddField("author", author).AddField("cql.serverChoice", serverChoice).AddField("full", full).AddField("tag", tag)
+	serverChoice := NewFieldCombo(true, []Field{full, title, author})
+	anyf := NewFieldCombo(false, []Field{full, title, author})
+	alwaysTrue := NewFieldCombo(true, []Field{})
+
+	def.AddField("title", title).
+		AddField("author", author).
+		AddField("cql.serverChoice", serverChoice).
+		AddField("full", full).AddField("tag", tag).
+		AddField("any", anyf).
+		AddField("alwaysTrue", alwaysTrue)
 
 	price := NewFieldNumber()
 	def.AddField("price", price)
@@ -48,18 +54,18 @@ func TestParsing(t *testing.T) {
 		expected     string
 		expectedArgs []any
 	}{
-		{"abc", "T = $1", []any{"abc"}},
-		{"\"\"", "T IS NOT NULL", []any{}},
+		{"tag = abc", "T = $1", []any{"abc"}},
+		{"tag = \"\"", "T IS NOT NULL", []any{}},
 		{"au=2", "error: unknown field au", nil},
 		{"title>2", "error: unsupported relation >", nil},
 		{"title=2", "Title = $1", []any{"2"}},
 		{"title==2", "Title = $1", []any{"2"}},
 		{"title exact 2", "Title = $1", []any{"2"}},
 		{"title<>2", "Title <> $1", []any{"2"}},
-		{"tag any \"1 23 45\"", "Tag IN($1, $2, $3)", []any{"1", "23", "45"}},
-		{"tag <> \" 1 23 45 \"", "Tag NOT IN($1, $2, $3)", []any{"1", "23", "45"}},
+		{"tag any \"1 23 45\"", "T IN($1, $2, $3)", []any{"1", "23", "45"}},
+		{"tag <> \" 1 23 45 \"", "T NOT IN($1, $2, $3)", []any{"1", "23", "45"}},
 		{"tag any \"*\"", "error: masking op * unsupported", nil},
-		{"a or b and c", "(T = $1 OR T = $2) AND T = $3", []any{"a", "b", "c"}},
+		{"tag=a or tag=b and tag=c", "(T = $1 OR T = $2) AND T = $3", []any{"a", "b", "c"}},
 		{"title = abc", "Title = $1", []any{"abc"}},
 		{"author = \"test\"", "Author = $1", []any{"test"}},
 		{"author <> \"test\"", "Author <> $1", []any{"test"}},
@@ -79,7 +85,6 @@ func TestParsing(t *testing.T) {
 		{"author=\"a*\\x\"", "error: a masking backslash in a CQL string must be followed by *, ?, ^, \" or \\", nil},
 		{"author=\"a*\\*\\\"\\?\\^\\\\", "Author LIKE $1", []any{"a%*\"?^\\\\"}},
 		{"author=\"a\\*\\\"\\?\\^\\\\", "Author = $1", []any{"a*\"?^\\"}},
-
 		{"title=\"a*\"", "error: masking op * unsupported", nil},
 		{"title=\"a?\"", "error: masking op ? unsupported", nil},
 		{"title=\"a^\"", "error: anchor op ^ unsupported", nil},
@@ -96,6 +101,15 @@ func TestParsing(t *testing.T) {
 		{"full any \"a b\"", "to_tsvector('english', full) @@ to_tsquery('english', $1)", []any{"'a'|'b'"}},
 		{"full=\"a*\"", "error: masking op * unsupported", nil},
 		{"full > x", "error: unsupported relation >", nil},
+		{"a", "(to_tsvector('english', full) @@ to_tsquery('english', $1) OR Title = $2 OR Author = $3)", []any{"'a'", "a", "a"}},
+		{"cql.serverChoice=a", "(to_tsvector('english', full) @@ to_tsquery('english', $1) OR Title = $2 OR Author = $3)", []any{"'a'", "a", "a"}},
+		{"cql.serverChoice>a", "error: unsupported relation >", nil},
+		{"cql.serverChoice==a", "(Title = $1 OR Author = $2)", []any{"a", "a"}},
+		{"a and b", "(to_tsvector('english', full) @@ to_tsquery('english', $1) OR Title = $2 OR Author = $3) AND " +
+			"(to_tsvector('english', full) @@ to_tsquery('english', $4) OR Title = $5 OR Author = $6)", []any{"'a'", "a", "a", "'b'", "b", "b"}},
+		{"any==a", "error: unsupported relation ==", nil},
+		{"any=\"\"", "(full IS NOT NULL OR Title IS NOT NULL OR Author IS NOT NULL)", []any{}},
+		{"alwaysTrue=a", "TRUE", []any{}},
 		{"price = 10", "price = $1", []any{10.0}},
 		{"price == 10", "price = $1", []any{10.0}},
 		{"price exact 10", "price = $1", []any{10.0}},
