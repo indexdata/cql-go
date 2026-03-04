@@ -40,7 +40,10 @@ func (f *FieldCombo) Generate(sc cql.SearchClause, queryArgumentIndex int) (stri
 		args = append(args, fieldArgs...)
 	}
 	if len(sqlParts) == 0 {
-		return "TRUE", args, err
+		if err != nil {
+			return "", nil, err
+		}
+		return "TRUE", args, nil
 	}
 	return "(" + strings.Join(sqlParts, " OR ") + ")", args, nil
 }
