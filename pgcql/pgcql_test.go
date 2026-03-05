@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/indexdata/cql-go/cql"
 	"github.com/stretchr/testify/assert"
@@ -42,6 +43,15 @@ func TestParsing(t *testing.T) {
 
 	price := NewFieldNumber()
 	def.AddField("price", price)
+
+	dateField := NewFieldDate().WithOnlyDate()
+	def.AddField("date", dateField)
+
+	dateTimeField := NewFieldDate()
+	def.AddField("datetime", dateTimeField)
+
+	dateTimeWithZone, err := time.Parse(time.RFC3339, "2026-03-05T09:34:27+01:00")
+	assert.NoError(t, err)
 
 	for _, testcase := range []struct {
 		query        string
@@ -107,6 +117,29 @@ func TestParsing(t *testing.T) {
 		{"price <= beta", "error: invalid number beta", nil},
 		{"price all 10.95", "error: unsupported relation all", nil},
 		{"price = \"\"", "price IS NOT NULL", []any{}},
+		{"date = 2026-03-05", "date = $1", []any{time.Date(2026, 3, 5, 0, 0, 0, 0, time.UTC)}},
+		{"date == 2026-03-05", "date = $1", []any{time.Date(2026, 3, 5, 0, 0, 0, 0, time.UTC)}},
+		{"date exact 2026-03-05", "date = $1", []any{time.Date(2026, 3, 5, 0, 0, 0, 0, time.UTC)}},
+		{"date > 2026-03-05", "date > $1", []any{time.Date(2026, 3, 5, 0, 0, 0, 0, time.UTC)}},
+		{"date < 2026-03-05", "date < $1", []any{time.Date(2026, 3, 5, 0, 0, 0, 0, time.UTC)}},
+		{"date >= 2026-03-05", "date >= $1", []any{time.Date(2026, 3, 5, 0, 0, 0, 0, time.UTC)}},
+		{"date <= 2026-03-05", "date <= $1", []any{time.Date(2026, 3, 5, 0, 0, 0, 0, time.UTC)}},
+		{"date = April", "error: invalid date April, it should be in format YYYY-MM-DD", nil},
+		{"date all 2026-03-05", "error: unsupported relation all", nil},
+		{"date = \"\"", "date IS NOT NULL", []any{}},
+		{"datetime = 2026-03-05 09:34:27", "datetime = $1", []any{time.Date(2026, 3, 5, 9, 34, 27, 0, time.UTC)}},
+		{"datetime = 2026-03-05T09:34:27Z", "datetime = $1", []any{time.Date(2026, 3, 5, 9, 34, 27, 0, time.UTC)}},
+		{"datetime = 2026-03-05T09:34:27+01:00", "datetime = $1", []any{dateTimeWithZone}},
+		{"datetime = 2026-03-05", "datetime = $1", []any{time.Date(2026, 3, 5, 0, 0, 0, 0, time.UTC)}},
+		{"datetime == 2026-03-05", "datetime = $1", []any{time.Date(2026, 3, 5, 0, 0, 0, 0, time.UTC)}},
+		{"datetime exact 2026-03-05", "datetime = $1", []any{time.Date(2026, 3, 5, 0, 0, 0, 0, time.UTC)}},
+		{"datetime > 2026-03-05", "datetime > $1", []any{time.Date(2026, 3, 5, 0, 0, 0, 0, time.UTC)}},
+		{"datetime < 2026-03-05", "datetime < $1", []any{time.Date(2026, 3, 5, 0, 0, 0, 0, time.UTC)}},
+		{"datetime >= 2026-03-05", "datetime >= $1", []any{time.Date(2026, 3, 5, 0, 0, 0, 0, time.UTC)}},
+		{"datetime <= 2026-03-05", "datetime <= $1", []any{time.Date(2026, 3, 5, 0, 0, 0, 0, time.UTC)}},
+		{"datetime = April", "error: invalid date time April, it should be in format YYYY-MM-DD, YYYY-MM-DD HH:MM:SS, YYYY-MM-DDTHH:MM:SSZ, YYYY-MM-DDTHH:MM:SS±HH:MM", nil},
+		{"datetime all 2026-03-05", "error: unsupported relation all", nil},
+		{"datetime = \"\"", "datetime IS NOT NULL", []any{}},
 	} {
 		var parser cql.Parser
 		q, err := parser.Parse(testcase.query)
