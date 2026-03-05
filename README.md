@@ -135,7 +135,7 @@ Handle query and inspect rows
     res, err := def.Parse(q, 1)
     assert.NoError(t, err, "pgcql conversion failed")
     var rows pgx.Rows
-    sqlQuery := "SELECT id FROM mytable WHERE"+res.GetWhereClause()+res.GetOrderByClause()
+    sqlQuery := "SELECT id FROM mytable WHERE "+res.GetWhereClause()+res.GetOrderByClause()
     rows, err = conn.Query(ctx, sqlQuery, res.GetQueryArguments()...)
     assert.NoErrorf(t, err, "failed to execute query '%s' sqlQuery='%s'", query, sqlQuery)
     // inspect rows
