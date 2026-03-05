@@ -21,6 +21,35 @@ func TestBadSearchClause(t *testing.T) {
 	assert.Equal(t, "unsupported clause type", err.Error())
 }
 
+func TestOrderByFields(t *testing.T) {
+	def := NewPgDefinition()
+	title := &FieldString{}
+	title.WithExact().SetColumn("Title")
+	def.AddField("title", title)
+
+	tag := &FieldString{}
+	tag.WithSplit().WithExact().SetColumn("T")
+	def.AddField("tag", tag)
+
+	for _, testcase := range []struct {
+		query    string
+		expected []string
+	}{
+		{"title = a", []string{}},
+		{"title = a sortby title", []string{"Title"}},
+		{"title = a sortby title tag", []string{"Title", "T"}},
+	} {
+		var parser cql.Parser
+		q, err := parser.Parse(testcase.query)
+		assert.NoErrorf(t, err, "failed to parse cql query '%s'", testcase.query)
+		pgQuery, err := def.Parse(q, 1)
+		assert.NoErrorf(t, err, "failed to pg parse cql query '%s'", testcase.query)
+		if !reflect.DeepEqual(pgQuery.GetOrderByFields(), testcase.expected) {
+			t.Errorf("%s: Expected order by fields %v, got %v", testcase.query, testcase.expected, pgQuery.GetOrderByFields())
+		}
+	}
+}
+
 func TestParsing(t *testing.T) {
 	def := NewPgDefinition()
 	title := &FieldString{}
@@ -85,7 +114,11 @@ func TestParsing(t *testing.T) {
 		{"title = 'a' OR author = 'b'", "Title = $1 OR Author = $2", []any{"'a'", "'b'"}},
 		{"title = a NOT author = b", "Title = $1 AND NOT Author = $2", []any{"a", "b"}},
 		{"a prox b", "error: unsupported operator prox", []any{}},
-		{"a sortby title", "error: sorting not supported", []any{}},
+		{"author = a sortby title", "Author = $1 ORDER BY Title DESC", []any{"a"}},
+		{"author = a sortby title/sort.descending author/sort.ascending", "Author = $1 ORDER BY Title DESC, Author ASC", []any{"a"}},
+		{"author = a sortby gyf", "error: unknown field gyf", nil},
+		{"author = a sortby any", "error: field any does not support sorting", nil},
+		{"author = a sortby title/sort.foo", "error: unsupported sort modifier sort.foo", nil},
 		{"au=2 or a", "error: unknown field au", nil},
 		{"a or au=2", "error: unknown field au", nil},
 		{"author=\"ab?%\"", "Author LIKE $1", []any{"ab_\\%"}},
@@ -179,17 +212,12 @@ func TestParsing(t *testing.T) {
 			t.Errorf("%s: Expected error, but got OK", testcase.query)
 			continue
 		}
-		if pgQuery.GetWhereClause() != testcase.expected {
-			t.Errorf("%s: Expected %s, got %s", testcase.query, testcase.expected, pgQuery.GetWhereClause())
+		fullResult := pgQuery.GetWhereClause() + pgQuery.GetOrderByClause()
+		if fullResult != testcase.expected {
+			t.Errorf("%s: Expected %s, got %s", testcase.query, testcase.expected, fullResult)
 		}
 		if !reflect.DeepEqual(pgQuery.GetQueryArguments(), testcase.expectedArgs) {
 			t.Errorf("%s: Expected arguments %v, got %v", testcase.query, testcase.expectedArgs, pgQuery.GetQueryArguments())
-		}
-		if pgQuery.GetOrderByClause() != "" {
-			t.Errorf("%s: Expected empty order by clause, got %s", testcase.query, pgQuery.GetOrderByClause())
-		}
-		if pgQuery.GetOrderByFields() != "" {
-			t.Errorf("%s: Expected empty order by fields, got %s", testcase.query, pgQuery.GetOrderByFields())
 		}
 	}
 }

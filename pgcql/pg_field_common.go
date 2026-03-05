@@ -15,6 +15,10 @@ func (f *FieldCommon) SetColumn(column string) {
 	f.column = column
 }
 
+func (f *FieldCommon) Sort() string {
+	return f.column
+}
+
 func (f *FieldCommon) handleUnorderedRelation(sc cql.SearchClause) (string, error) {
 	switch sc.Relation {
 	case "==", cql.EXACT, cql.EQ:

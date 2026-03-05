@@ -16,10 +16,14 @@ func NewFieldCombo(ignoreError bool, fields []Field) *FieldCombo {
 }
 
 func (f *FieldCombo) GetColumn() string {
-	return ""
+	return "" // FieldCombo does not have a single column, so return an empty string (no sorting on this field)
 }
 
 func (f *FieldCombo) SetColumn(column string) {
+}
+
+func (f *FieldCombo) Sort() string {
+	return ""
 }
 
 func (f *FieldCombo) Generate(sc cql.SearchClause, queryArgumentIndex int) (string, []any, error) {

@@ -19,8 +19,8 @@ func runQuery(t *testing.T, parser cql.Parser, conn *pgx.Conn, ctx context.Conte
 	res, err := def.Parse(q, 1)
 	assert.NoErrorf(t, err, "failed to parse pgcql query for cql query '%s'", query)
 	var rows pgx.Rows
-	rows, err = conn.Query(ctx, "SELECT id FROM mytable WHERE "+res.GetWhereClause(), res.GetQueryArguments()...)
-	assert.NoErrorf(t, err, "failed to execute pgx query for cql query '%s' whereClause='%s'", query, res.GetWhereClause())
+	rows, err = conn.Query(ctx, "SELECT id FROM mytable WHERE "+res.GetWhereClause()+res.GetOrderByClause(), res.GetQueryArguments()...)
+	assert.NoErrorf(t, err, "failed to execute pgx query for cql query '%s' whereClause='%s'", query, res.GetWhereClause()+res.GetOrderByClause())
 	ids := make([]int, 0)
 	for rows.Next() {
 		var id int
@@ -100,6 +100,9 @@ func TestPgx(t *testing.T) {
 			{"title = \"the texbook\"", []int{}},
 			{"title = \"the \"", []int{}},
 			{"title = \"\"", []int{1, 2, 3}},
+			{"title = \"\" sortby title", []int{2, 1, 3}},
+			{"title = \"\" sortby title/sort.ascending", []int{3, 1, 2}},
+			{"title = \"\" sortby country title", []int{2, 1, 3}},
 			{"author = \"\"", []int{1, 2}},
 			{"title = \"the art of computer programming, volume 1\"", []int{1}},
 			{"title = \"the art of computer programming, volume\"", []int{}},
