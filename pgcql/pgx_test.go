@@ -54,20 +54,20 @@ func TestPgx(t *testing.T) {
 		err := conn.Close(ctx)
 		assert.NoError(t, err, "failed to close db connection")
 	}()
-	_, err = conn.Exec(ctx, "CREATE TABLE mytable (id SERIAL PRIMARY KEY, title TEXT, author TEXT, tag TEXT, year INT, address JSONB)")
+	_, err = conn.Exec(ctx, "CREATE TABLE mytable (id SERIAL PRIMARY KEY, title TEXT, author TEXT, tag TEXT, year INT, address JSONB, start_date date, created_at timestamp)")
 	assert.NoError(t, err, "failed to create mytable")
 
 	var rows pgx.Rows
 
-	rows, err = conn.Query(ctx, "INSERT INTO mytable (title, author, tag, year, address) "+
-		"VALUES ($1, $2, $3, $4, $5)", "the art of computer programming, volume 1", "donald e. knuth", "tag1", 1968,
-		`{"city": "Reading", "country": "USA", "zip": 19601}`)
+	rows, err = conn.Query(ctx, "INSERT INTO mytable (title, author, tag, year, address, start_date, created_at) "+
+		"VALUES ($1, $2, $3, $4, $5, $6, $7)", "the art of computer programming, volume 1", "donald e. knuth", "tag1", 1968,
+		`{"city": "Reading", "country": "USA", "zip": 19601}`, "2026-03-05", "2026-03-05 09:34:27")
 	assert.NoError(t, err, "failed to insert data")
 	rows.Close()
 
-	rows, err = conn.Query(ctx, "INSERT INTO mytable (title, author, tag, year, address) "+
-		"VALUES ($1, $2, $3, $4, $5)", "the TeXbook", "d. e. knuth", "tag2", 1984,
-		`{"city": "Stanford", "country": "USA", "zip": 67890}`)
+	rows, err = conn.Query(ctx, "INSERT INTO mytable (title, author, tag, year, address, start_date, created_at) "+
+		"VALUES ($1, $2, $3, $4, $5, $6, $7)", "the TeXbook", "d. e. knuth", "tag2", 1984,
+		`{"city": "Stanford", "country": "USA", "zip": 67890}`, "2026-03-06", "2026-03-06 09:34:27")
 	assert.NoError(t, err, "failed to insert data")
 	rows.Close()
 
@@ -88,6 +88,8 @@ func TestPgx(t *testing.T) {
 		def.AddField("country", NewFieldString().WithExact().WithColumn("address->>'country'"))
 		def.AddField("zip", NewFieldNumber().WithColumn("address->'zip'"))
 		def.AddField("zip2", NewFieldNumber().WithColumn("(address->'zip')::numeric"))
+		def.AddField("start_date", NewFieldDate().WithOnlyDate())
+		def.AddField("created_at", NewFieldDate())
 
 		var parser cql.Parser
 		for _, testcase := range []struct {
@@ -132,6 +134,12 @@ func TestPgx(t *testing.T) {
 			{"zip >= 0", []int{1, 2}},
 			{"zip = \"\"", []int{1, 2}},
 			{"zip2 = 19601", []int{1}},
+			{"start_date >= 2026-03-05", []int{1, 2}},
+			{"start_date > 2026-03-05", []int{2}},
+			{"start_date = 2026-03-05", []int{1}},
+			{"created_at > 2026-03-05", []int{1, 2}},
+			{"created_at > 2026-03-05 10:00:00", []int{2}},
+			{"created_at = \"\"", []int{1, 2}},
 		} {
 			runQuery(t, parser, conn, ctx, def, testcase.query, testcase.expectedIds)
 		}
