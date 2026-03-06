@@ -19,6 +19,9 @@ func runQuery(t *testing.T, parser cql.Parser, conn *pgx.Conn, ctx context.Conte
 	assert.NoErrorf(t, err, "failed to parse cql query '%s'", query)
 	res, err := def.Parse(q, 1)
 	assert.NoErrorf(t, err, "failed to parse pgcql query for cql query '%s'", query)
+	if err != nil {
+		return
+	}
 	var rows pgx.Rows
 	fullQuery := "SELECT id FROM mytable LEFT JOIN publisher ON mytable.publisher_id = publisher.idp WHERE " +
 		res.GetWhereClause() + res.GetOrderByClause()
@@ -259,6 +262,8 @@ func TestPgx(t *testing.T) {
 		publisherField := NewFieldString().WithFullText("simple").WithColumn("publisher.name")
 		def.AddField("publisher", publisherField)
 		def.AddField("cql.serverChoice", NewFieldCombo(false, []Field{titleFull, publisherField}))
+		allRefcordField := NewFieldCombo(true, []Field{})
+		def.AddField("cql.allRecords", allRefcordField)
 
 		var parser cql.Parser
 		for _, testcase := range []struct {
@@ -269,6 +274,7 @@ func TestPgx(t *testing.T) {
 			{"\"the TeXbook\"", []int{2}},
 			{"\"Addision Wesley\"", []int{1, 2}},
 			{"\"Unknown publisher\"", []int{3}},
+			{"cql.allRecords=1 sortby publisher", []int{3, 1, 2}},
 		} {
 			runQuery(t, parser, conn, ctx, def, testcase.query, testcase.expectedIds)
 		}
