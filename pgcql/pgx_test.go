@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/indexdata/cql-go/cql"
 	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/assert"
@@ -18,9 +19,15 @@ func runQuery(t *testing.T, parser cql.Parser, conn *pgx.Conn, ctx context.Conte
 	assert.NoErrorf(t, err, "failed to parse cql query '%s'", query)
 	res, err := def.Parse(q, 1)
 	assert.NoErrorf(t, err, "failed to parse pgcql query for cql query '%s'", query)
+	if err != nil {
+		return
+	}
 	var rows pgx.Rows
-	rows, err = conn.Query(ctx, "SELECT id FROM mytable WHERE "+res.GetWhereClause()+res.GetOrderByClause(), res.GetQueryArguments()...)
-	assert.NoErrorf(t, err, "failed to execute pgx query for cql query '%s' whereClause='%s'", query, res.GetWhereClause()+res.GetOrderByClause())
+	fullQuery := "SELECT id FROM mytable LEFT JOIN publisher ON mytable.publisher_id = publisher.idp WHERE " +
+		res.GetWhereClause() + res.GetOrderByClause()
+	rows, err = conn.Query(ctx, fullQuery, res.GetQueryArguments()...)
+	assert.NoErrorf(t, err, "failed to execute pgx query for cql query '%s' whereClause='%s'", query, fullQuery)
+
 	ids := make([]int, 0)
 	for rows.Next() {
 		var id int
@@ -54,26 +61,42 @@ func TestPgx(t *testing.T) {
 		err := conn.Close(ctx)
 		assert.NoError(t, err, "failed to close db connection")
 	}()
-	_, err = conn.Exec(ctx, "CREATE TABLE mytable (id SERIAL PRIMARY KEY, title TEXT, author TEXT, tag TEXT, year INT, address JSONB, start_date date, created_at timestamp)")
+
+	_, err = conn.Exec(ctx, "CREATE TABLE publisher (idp uuid NOT NULL PRIMARY KEY, name TEXT)")
+	assert.NoError(t, err, "failed to create publisher")
+
+	_, err = conn.Exec(ctx, "CREATE TABLE mytable (id SERIAL PRIMARY KEY, title TEXT, author TEXT, tag TEXT, year INT, address JSONB, "+
+		"publisher_id uuid REFERENCES publisher(idp), "+
+		"start_date date, created_at timestamp)")
 	assert.NoError(t, err, "failed to create mytable")
 
 	var rows pgx.Rows
 
-	rows, err = conn.Query(ctx, "INSERT INTO mytable (title, author, tag, year, address, start_date, created_at) "+
-		"VALUES ($1, $2, $3, $4, $5, $6, $7)", "the art of computer programming, volume 1", "donald e. knuth", "tag1", 1968,
-		`{"city": "Reading", "country": "USA", "zip": 19601}`, "2026-03-05", "2026-03-05 09:34:27")
+	uuid1 := uuid.New()
+	rows, err = conn.Query(ctx, "INSERT INTO publisher (idp, name) VALUES ($1, $2)", uuid1, "Addision-Wesley")
 	assert.NoError(t, err, "failed to insert data")
 	rows.Close()
 
-	rows, err = conn.Query(ctx, "INSERT INTO mytable (title, author, tag, year, address, start_date, created_at) "+
-		"VALUES ($1, $2, $3, $4, $5, $6, $7)", "the TeXbook", "d. e. knuth", "tag2", 1984,
-		`{"city": "Stanford", "country": "USA", "zip": 67890}`, "2026-03-06", "2026-03-06 09:34:27")
+	uuid2 := uuid.New()
+	rows, err = conn.Query(ctx, "INSERT INTO publisher (idp, name) VALUES ($1, $2)", uuid2, "Unknown publisher")
 	assert.NoError(t, err, "failed to insert data")
 	rows.Close()
 
-	rows, err = conn.Query(ctx, "INSERT INTO mytable (title, year, address) "+
-		"VALUES ($1, $2, $3)", "anonymous' list", 2025,
-		`{"city": "Unknown", "country": "Unknown country"}`)
+	rows, err = conn.Query(ctx, "INSERT INTO mytable (title, author, tag, year, address, start_date, created_at, publisher_id) "+
+		"VALUES ($1, $2, $3, $4, $5, $6, $7, $8)", "the art of computer programming, volume 1", "donald e. knuth", "tag1", 1968,
+		`{"city": "Reading", "country": "USA", "zip": 19601}`, "2026-03-05", "2026-03-05 09:34:27", uuid1)
+	assert.NoError(t, err, "failed to insert data")
+	rows.Close()
+
+	rows, err = conn.Query(ctx, "INSERT INTO mytable (title, author, tag, year, address, start_date, created_at, publisher_id) "+
+		"VALUES ($1, $2, $3, $4, $5, $6, $7, $8)", "the TeXbook", "d. e. knuth", "tag2", 1984,
+		`{"city": "Stanford", "country": "USA", "zip": 67890}`, "2026-03-06", "2026-03-06 09:34:27", uuid1)
+	assert.NoError(t, err, "failed to insert data")
+	rows.Close()
+
+	rows, err = conn.Query(ctx, "INSERT INTO mytable (title, year, address, publisher_id) "+
+		"VALUES ($1, $2, $3, $4)", "anonymous' list", 2025,
+		`{"city": "Unknown", "country": "Unknown country"}`, uuid2)
 	assert.NoError(t, err, "failed to insert data")
 	rows.Close()
 
@@ -227,6 +250,31 @@ func TestPgx(t *testing.T) {
 			{"\"knuth\"", []int{1, 2}},
 			{"\"knuth texbook\"", []int{}},
 			{"knuth texbook", []int{}},
+		} {
+			runQuery(t, parser, conn, ctx, def, testcase.query, testcase.expectedIds)
+		}
+	})
+
+	t.Run("joined ops", func(t *testing.T) {
+		def := NewPgDefinition()
+
+		titleFull := NewFieldString().WithFullText("simple").WithColumn("title")
+		publisherField := NewFieldString().WithFullText("simple").WithColumn("publisher.name")
+		def.AddField("publisher", publisherField)
+		def.AddField("cql.serverChoice", NewFieldCombo(false, []Field{titleFull, publisherField}))
+		allRefcordField := NewFieldCombo(true, []Field{})
+		def.AddField("cql.allRecords", allRefcordField)
+
+		var parser cql.Parser
+		for _, testcase := range []struct {
+			query       string
+			expectedIds []int
+		}{
+			{"publisher = \"Addision-Wesley\"", []int{1, 2}},
+			{"\"the TeXbook\"", []int{2}},
+			{"\"Addision Wesley\"", []int{1, 2}},
+			{"\"Unknown publisher\"", []int{3}},
+			{"cql.allRecords=1 sortby publisher", []int{3, 1, 2}},
 		} {
 			runQuery(t, parser, conn, ctx, def, testcase.query, testcase.expectedIds)
 		}
