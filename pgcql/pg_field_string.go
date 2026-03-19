@@ -13,6 +13,7 @@ type FieldString struct {
 	enableLike  bool
 	enableExact bool
 	enableSplit bool
+	EqMap       cql.Relation
 }
 
 func NewFieldString() *FieldString {
@@ -46,6 +47,11 @@ func (f *FieldString) WithExact() *FieldString {
 
 func (f *FieldString) WithSplit() *FieldString {
 	f.enableSplit = true
+	return f
+}
+
+func (f *FieldString) WithEqMap(relation cql.Relation) *FieldString {
+	f.EqMap = relation
 	return f
 }
 
@@ -188,6 +194,9 @@ func (f *FieldString) Generate(sc cql.SearchClause, queryArgumentIndex int) (str
 	sql := f.handleEmptyTerm(sc)
 	if sql != "" {
 		return sql, nil, nil
+	}
+	if f.EqMap != "" && sc.Relation == cql.EQ {
+		sc.Relation = f.EqMap
 	}
 	fulltext := f.language != ""
 	if fulltext {
