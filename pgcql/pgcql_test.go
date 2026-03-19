@@ -63,7 +63,7 @@ func TestParsing(t *testing.T) {
 	tag.WithSplit().WithExact().SetColumn("T")
 
 	full := &FieldString{}
-	full.WithFullText("english")
+	full.WithFullText("english").WithEqMap(cql.ALL)
 
 	serverChoice := NewFieldCombo(true, []Field{full, title, author})
 	anyf := NewFieldCombo(false, []Field{full, title, author})
@@ -141,6 +141,7 @@ func TestParsing(t *testing.T) {
 		{"full = \"abc \"", "to_tsvector('english', full) @@ to_tsquery('english', $1)", []any{"'abc'"}},
 		{"full adj \"a b\"", "to_tsvector('english', full) @@ to_tsquery('english', $1)", []any{"'a'<->'b'"}},
 		{"full all \"a b\"", "to_tsvector('english', full) @@ to_tsquery('english', $1)", []any{"'a'&'b'"}},
+		{"full = \"a b\"", "to_tsvector('english', full) @@ to_tsquery('english', $1)", []any{"'a'&'b'"}},
 		{"full any \"a b\"", "to_tsvector('english', full) @@ to_tsquery('english', $1)", []any{"'a'|'b'"}},
 		{"full=\"a*\"", "error: masking op * unsupported", nil},
 		{"full > x", "error: unsupported relation >", nil},
