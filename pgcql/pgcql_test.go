@@ -63,7 +63,7 @@ func TestParsing(t *testing.T) {
 	tag.WithSplit().WithExact().SetColumn("T")
 
 	full := &FieldString{}
-	full.WithFullText("english").WithEqMap(cql.ALL)
+	full.WithFullText("english").WithServerChoiceRel(cql.ALL)
 
 	serverChoice := NewFieldCombo(true, []Field{full, title, author})
 	anyf := NewFieldCombo(false, []Field{full, title, author})
@@ -104,6 +104,7 @@ func TestParsing(t *testing.T) {
 		{"title==2", "Title = $1", []any{"2"}},
 		{"title exact 2", "Title = $1", []any{"2"}},
 		{"title<>2", "Title <> $1", []any{"2"}},
+		{"title scr 2", "error: unsupported relation scr", []any{}},
 		{"tag any \"1 23 45\"", "T IN($1, $2, $3)", []any{"1", "23", "45"}},
 		{"tag <> \" 1 23 45 \"", "T NOT IN($1, $2, $3)", []any{"1", "23", "45"}},
 		{"tag any \"*\"", "error: masking op * unsupported", nil},
@@ -145,6 +146,7 @@ func TestParsing(t *testing.T) {
 		{"full adj \"a b\"", "to_tsvector('english', full) @@ to_tsquery('english', $1)", []any{"'a'<->'b'"}},
 		{"full all \"a b\"", "to_tsvector('english', full) @@ to_tsquery('english', $1)", []any{"'a'&'b'"}},
 		{"full = \"a b\"", "to_tsvector('english', full) @@ to_tsquery('english', $1)", []any{"'a'&'b'"}},
+		{"full scr \"a b\"", "to_tsvector('english', full) @@ to_tsquery('english', $1)", []any{"'a'&'b'"}},
 		{"full any \"a b\"", "to_tsvector('english', full) @@ to_tsquery('english', $1)", []any{"'a'|'b'"}},
 		{"full=\"a*\"", "error: masking op * unsupported", nil},
 		{"full > x", "error: unsupported relation >", nil},
