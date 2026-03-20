@@ -85,6 +85,9 @@ func TestParsing(t *testing.T) {
 	dateTimeField := NewFieldDate()
 	def.AddField("datetime", dateTimeField)
 
+	boolField := NewFieldBool()
+	def.AddField("bool", boolField)
+
 	dateTimeWithZone, err := time.Parse(time.RFC3339, "2026-03-05T09:34:27+01:00")
 	assert.NoError(t, err)
 
@@ -188,6 +191,17 @@ func TestParsing(t *testing.T) {
 		{"datetime = April", "error: invalid date time April, it should be in format YYYY-MM-DD, YYYY-MM-DD HH:MM:SS, YYYY-MM-DDTHH:MM:SSZ, YYYY-MM-DDTHH:MM:SS±HH:MM", nil},
 		{"datetime all 2026-03-05", "error: unsupported relation all", nil},
 		{"datetime = \"\"", "datetime IS NOT NULL", []any{}},
+		{"bool = true", "bool = $1", []any{true}},
+		{"bool = TRUE", "bool = $1", []any{true}},
+		{"bool = 1", "bool = $1", []any{true}},
+		{"bool = on", "bool = $1", []any{true}},
+		{"bool = yes", "bool = $1", []any{true}},
+		{"bool = false", "bool = $1", []any{false}},
+		{"bool = 0", "bool = $1", []any{false}},
+		{"bool = off", "bool = $1", []any{false}},
+		{"bool = no", "bool = $1", []any{false}},
+		{"bool > true", "error: unsupported relation >", nil},
+		{"bool = T", "error: invalid bool T", nil},
 	} {
 		var parser cql.Parser
 		q, err := parser.Parse(testcase.query)
