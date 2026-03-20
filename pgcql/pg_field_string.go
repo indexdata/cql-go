@@ -9,11 +9,11 @@ import (
 
 type FieldString struct {
 	FieldCommon
-	language    string
-	enableLike  bool
-	enableExact bool
-	enableSplit bool
-	eqMap       cql.Relation
+	language        string
+	enableLike      bool
+	enableExact     bool
+	enableSplit     bool
+	serverChoiceRel cql.Relation
 }
 
 func NewFieldString() *FieldString {
@@ -50,8 +50,8 @@ func (f *FieldString) WithSplit() *FieldString {
 	return f
 }
 
-func (f *FieldString) WithEqMap(relation cql.Relation) *FieldString {
-	f.eqMap = relation
+func (f *FieldString) WithServerChoiceRel(relation cql.Relation) *FieldString {
+	f.serverChoiceRel = relation
 	return f
 }
 
@@ -195,8 +195,8 @@ func (f *FieldString) Generate(sc cql.SearchClause, queryArgumentIndex int) (str
 	if sql != "" {
 		return sql, nil, nil
 	}
-	if f.eqMap != "" && sc.Relation == cql.EQ {
-		sc.Relation = f.eqMap
+	if f.serverChoiceRel != "" && (sc.Relation == cql.EQ || sc.Relation == cql.SCR) {
+		sc.Relation = f.serverChoiceRel
 	}
 	fulltext := f.language != ""
 	if fulltext {
