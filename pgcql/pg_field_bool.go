@@ -32,13 +32,14 @@ func (f *FieldBool) Generate(sc cql.SearchClause, queryArgumentIndex int) (strin
 
 	// Map string values to boolean
 	var boolValue bool
-	switch strings.ToLower(sc.Term) {
+	term := strings.Join(sc.Terms, " ")
+	switch strings.ToLower(term) {
 	case "true", "1", "yes", "on":
 		boolValue = true
 	case "false", "0", "no", "off":
 		boolValue = false
 	default:
-		return "", nil, &PgError{message: fmt.Sprintf("invalid bool %s", sc.Term)}
+		return "", nil, &PgError{message: fmt.Sprintf("invalid bool %s", term)}
 	}
 
 	return f.column + " " + relOrdered + fmt.Sprintf(" $%d", queryArgumentIndex), []any{boolValue}, nil

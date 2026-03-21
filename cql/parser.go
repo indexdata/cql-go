@@ -133,17 +133,17 @@ func (p *Parser) searchClause(ctx *context) (Clause, error) {
 		ctx := context{index: indexOrTerm, relation: relation, relation_mods: mods, prefixes: ctx.prefixes, custom: ctx.custom}
 		return p.searchClause(&ctx)
 	}
-	var sb strings.Builder
-	sb.WriteString(indexOrTerm)
+	var sb []string
+	sb = append(sb, indexOrTerm)
 	for p.look == tokenSimpleString || p.look == tokenPrefixName || p.look == tokenRelSym {
 		if p.Strict {
 			return node, &ParseError{p.lexer.input, "relation expected", relPos}
 		} else {
-			sb.WriteString(" " + p.value)
+			sb = append(sb, p.value)
 			p.next()
 		}
 	}
-	sc := SearchClause{Index: ctx.index, Relation: ctx.relation, Term: sb.String(), Modifiers: ctx.relation_mods}
+	sc := SearchClause{Index: ctx.index, Relation: ctx.relation, Terms: sb, Modifiers: ctx.relation_mods}
 	node.SearchClause = &sc
 	return node, nil
 }

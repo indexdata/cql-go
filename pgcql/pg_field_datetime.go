@@ -2,6 +2,7 @@ package pgcql
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/indexdata/cql-go/cql"
@@ -38,12 +39,13 @@ func (f *FieldDateTime) Generate(sc cql.SearchClause, queryArgumentIndex int) (s
 	if err != nil {
 		return "", nil, err
 	}
-	number, err := f.parseTerm(sc.Term)
+	term := strings.Join(sc.Terms, " ")
+	number, err := f.parseTerm(term)
 	if err != nil {
 		if f.isDate {
-			return "", nil, &PgError{message: fmt.Sprintf("invalid date %s, it should be in format YYYY-MM-DD", sc.Term)}
+			return "", nil, &PgError{message: fmt.Sprintf("invalid date %s, it should be in format YYYY-MM-DD", term)}
 		} else {
-			return "", nil, &PgError{message: fmt.Sprintf("invalid date time %s, it should be in format YYYY-MM-DD, YYYY-MM-DD HH:MM:SS, YYYY-MM-DDTHH:MM:SSZ, YYYY-MM-DDTHH:MM:SS±HH:MM", sc.Term)}
+			return "", nil, &PgError{message: fmt.Sprintf("invalid date time %s, it should be in format YYYY-MM-DD, YYYY-MM-DD HH:MM:SS, YYYY-MM-DDTHH:MM:SSZ, YYYY-MM-DDTHH:MM:SS±HH:MM", term)}
 		}
 	}
 	return f.column + " " + relOrdered + fmt.Sprintf(" $%d", queryArgumentIndex), []any{number}, nil

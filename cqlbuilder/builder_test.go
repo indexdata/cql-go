@@ -118,7 +118,7 @@ func TestBuilderAppendToExistingQuery(t *testing.T) {
 			SearchClause: &cql.SearchClause{
 				Index:    "title",
 				Relation: cql.EQ,
-				Term:     "base",
+				Terms:    []string{"base"},
 			},
 		},
 	}

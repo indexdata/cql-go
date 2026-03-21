@@ -55,15 +55,19 @@ func (f *FieldString) WithEqMap(relation cql.Relation) *FieldString {
 	return f
 }
 
-func maskedExact(cqlTerm string) (string, error) {
-	terms, err := maskedSplit(cqlTerm, "")
+func maskedExact(terms []string) (string, error) {
+	terms, err := maskedSplit(terms, "")
 	if err != nil {
 		return "", err
 	}
 	return terms[0], nil
 }
 
-func maskedSplit(cqlTerm string, splitChars string) ([]string, error) {
+func maskedSplit(terms []string, splitChars string) ([]string, error) {
+	return split(strings.Join(terms, " "), splitChars)
+}
+
+func split(cqlTerm string, splitChars string) ([]string, error) {
 	terms := make([]string, 0)
 	var pgTerm []rune
 	backslash := false
@@ -149,15 +153,8 @@ func maskedLike(cqlTerm string) (string, bool, error) {
 	return string(pgTerm), ops, nil
 }
 
-func (f *FieldString) handleEmptyTerm(sc cql.SearchClause) string {
-	if sc.Term == "" && sc.Relation == cql.EQ {
-		return f.column + " IS NOT NULL"
-	}
-	return ""
-}
-
 func (f *FieldString) generateTsQuery(sc cql.SearchClause, termOp string, queryArgumentIndex int) (string, []any, error) {
-	pgTerms, err := maskedSplit(sc.Term, " ")
+	pgTerms, err := maskedSplit(sc.Terms, " ")
 	if err != nil {
 		return "", nil, err
 	}
@@ -168,8 +165,29 @@ func (f *FieldString) generateTsQuery(sc cql.SearchClause, termOp string, queryA
 	return sql, []any{strings.Join(pgTerms, termOp)}, nil
 }
 
+func (f *FieldString) generateTsQuery2(sc cql.SearchClause, termOp string, queryArgumentIndex int, splitOp string) (string, []any, error) {
+	var sb strings.Builder
+	var cTerms []any
+	for j, phrase := range sc.Terms {
+		pgTerms, err := split(phrase, " ")
+		if err != nil {
+			return "", nil, err
+		}
+		for i, v := range pgTerms {
+			pgTerms[i] = "'" + strings.ReplaceAll(v, "'", "''") + "'"
+		}
+		sql := "to_tsvector('" + f.language + "', " + f.column + ") @@ to_tsquery('" + f.language + "', " + fmt.Sprintf("$%d", queryArgumentIndex+j) + ")"
+		if j > 0 {
+			sb.WriteString(" " + splitOp + " ")
+		}
+		sb.WriteString(sql)
+		cTerms = append(cTerms, strings.Join(pgTerms, termOp))
+	}
+	return sb.String(), cTerms, nil
+}
+
 func (f *FieldString) generateIn(sc cql.SearchClause, queryArgumentIndex int, not bool) (string, []any, error) {
-	pgTerms, err := maskedSplit(sc.Term, " ")
+	pgTerms, err := maskedSplit(sc.Terms, " ")
 	if err != nil {
 		return "", nil, err
 	}
@@ -202,7 +220,7 @@ func (f *FieldString) Generate(sc cql.SearchClause, queryArgumentIndex int) (str
 	if fulltext {
 		switch sc.Relation {
 		case cql.ADJ, cql.EQ:
-			return f.generateTsQuery(sc, "<->", queryArgumentIndex)
+			return f.generateTsQuery2(sc, "<->", queryArgumentIndex, "AND")
 		case cql.ALL:
 			return f.generateTsQuery(sc, "&", queryArgumentIndex)
 		case cql.ANY:
@@ -221,7 +239,7 @@ func (f *FieldString) Generate(sc cql.SearchClause, queryArgumentIndex int) (str
 		return "", nil, &PgError{message: "unsupported relation " + string(sc.Relation)}
 	}
 	if f.enableLike && (sc.Relation == cql.EQ || sc.Relation == cql.EXACT || sc.Relation == cql.NE) {
-		pgTerm, ops, err := maskedLike(sc.Term)
+		pgTerm, ops, err := maskedLike(sc.Terms[0])
 		if err != nil {
 			return "", nil, err
 		}
@@ -233,7 +251,7 @@ func (f *FieldString) Generate(sc cql.SearchClause, queryArgumentIndex int) (str
 			return f.column + " " + pgOp + fmt.Sprintf(" $%d", queryArgumentIndex), []any{pgTerm}, nil
 		}
 	}
-	pgTerm, err := maskedExact(sc.Term)
+	pgTerm, err := maskedExact(sc.Terms)
 	if err != nil {
 		return "", nil, err
 	}

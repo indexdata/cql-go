@@ -707,7 +707,7 @@ func TestMultiTermAndSymRel(t *testing.T) {
 		t.Fatalf("got error: %v", err)
 	}
 	out := q.String()
-	exp := "\"a b\""
+	exp := in
 	if exp != out {
 		t.Fatalf("Expected: %s, got %s", exp, out)
 	}
@@ -717,7 +717,7 @@ func TestMultiTermAndSymRel(t *testing.T) {
 		t.Fatalf("got error: %v", err)
 	}
 	out = q.String()
-	exp = "\"a b c\""
+	exp = in
 	if exp != out {
 		t.Fatalf("Expected: %s, got %s", exp, out)
 	}
@@ -728,7 +728,7 @@ func TestMultiTermAndSymRel(t *testing.T) {
 		t.Fatalf("parse error but was: %v", err)
 	}
 	out = q.String()
-	exp = "\"a b.c\""
+	exp = in
 	if exp != out {
 		t.Fatalf("expected not equals: %s, %s", exp, out)
 	}
@@ -739,7 +739,7 @@ func TestMultiTermAndSymRel(t *testing.T) {
 		t.Fatalf("expected parse error but was: %v", err)
 	}
 	out = q.String()
-	nexp := "\"a b.c\""
+	nexp := in
 	if nexp == out {
 		t.Fatalf("expected not equals: %s, %s", exp, out)
 	}
@@ -750,7 +750,7 @@ func TestMultiTermAndSymRel(t *testing.T) {
 		t.Fatalf("parse error: %s", err)
 	}
 	out = q.String()
-	exp = "\"a b.c d\""
+	exp = in
 	if exp != out {
 		t.Fatalf("expected not equals: %s, %s", exp, out)
 	}
@@ -771,7 +771,7 @@ func TestMultiTermAndSymRel(t *testing.T) {
 		t.Fatalf("parse error: %s", err)
 	}
 	out = q.String()
-	exp = "\"a b.c d\" or (> b = x a b.c d)"
+	exp = in
 	if exp != out {
 		t.Fatalf("expected not equals: %s, %s", exp, out)
 	}
@@ -791,7 +791,7 @@ func TestMultiTermAndSymRel(t *testing.T) {
 		t.Fatalf("parse error: %s", err)
 	}
 	out = q.String()
-	exp = "\"a b adj\""
+	exp = in
 	if exp != out {
 		t.Fatalf("expected:\n%s\nwas:\n%s", exp, out)
 	}
@@ -801,7 +801,7 @@ func TestMultiTermAndSymRel(t *testing.T) {
 		t.Fatalf("parse error: %s", err)
 	}
 	out = q.String()
-	exp = "\"a b adj adj\""
+	exp = in
 	if exp != out {
 		t.Fatalf("expected:\n%s\nwas:\n%s", exp, out)
 	}
@@ -812,7 +812,7 @@ func TestMultiTermAndSymRel(t *testing.T) {
 		t.Fatalf("parse error: %s", err)
 	}
 	out = q.String()
-	exp = "\"1 2.5 6\""
+	exp = in
 	if exp != out {
 		t.Fatalf("expected:\n%s\nwas:\n%s", exp, out)
 	}
@@ -833,7 +833,7 @@ func TestMultiTermAndSymRel(t *testing.T) {
 		t.Fatalf("parse error: %s", err)
 	}
 	out = q.String()
-	exp = "\"a b c\" or (> x a b c)"
+	exp = in
 	if exp != out {
 		t.Fatalf("expected:\n%s\nwas:\n%s", exp, out)
 	}
@@ -1026,13 +1026,13 @@ func TestSearchClauseString(t *testing.T) {
 	if exp != out {
 		t.Fatalf("expected:\n%s\nwas:\n%s", exp, out)
 	}
-	searchClause = SearchClause{Term: "lord of the rings"}
+	searchClause = SearchClause{Terms: []string{"lord of the rings"}}
 	exp = "\"lord of the rings\""
 	out = searchClause.String()
 	if exp != out {
 		t.Fatalf("expected:\n%s\nwas:\n%s", exp, out)
 	}
-	searchClause = SearchClause{Index: "title", Relation: EQ, Term: "lord of the rings"}
+	searchClause = SearchClause{Index: "title", Relation: EQ, Terms: []string{"lord of the rings"}}
 	exp = "title = \"lord of the rings\""
 	out = searchClause.String()
 	if exp != out {
@@ -1041,8 +1041,8 @@ func TestSearchClauseString(t *testing.T) {
 }
 
 func TestBoolClauseString(t *testing.T) {
-	clause1 := Clause{SearchClause: &SearchClause{Term: "x"}}
-	clause2 := Clause{SearchClause: &SearchClause{Term: "y"}}
+	clause1 := Clause{SearchClause: &SearchClause{Terms: []string{"x"}}}
+	clause2 := Clause{SearchClause: &SearchClause{Terms: []string{"y"}}}
 	boolClause := BoolClause{Left: clause1, Operator: AND, Right: clause2}
 	in := "x and y"
 	out := boolClause.String()

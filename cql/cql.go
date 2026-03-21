@@ -227,7 +227,7 @@ type SearchClause struct {
 	Index     string
 	Relation  Relation
 	Modifiers []Modifier
-	Term      string
+	Terms     []string
 }
 
 func (sc *SearchClause) write(sb *strings.Builder) {
@@ -244,7 +244,16 @@ func (sc *SearchClause) write(sb *strings.Builder) {
 		}
 		sb.WriteString(" ")
 	}
-	quote(sb, sc.Term)
+	if len(sc.Terms) == 0 {
+		quote(sb, "")
+		return
+	}
+	for i, term := range sc.Terms {
+		if i > 0 {
+			sb.WriteString(" ")
+		}
+		quote(sb, term)
+	}
 }
 
 func (sc *SearchClause) String() string {

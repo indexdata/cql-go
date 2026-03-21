@@ -3,6 +3,7 @@ package pgcql
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/indexdata/cql-go/cql"
 )
@@ -29,9 +30,10 @@ func (f *FieldNumber) Generate(sc cql.SearchClause, queryArgumentIndex int) (str
 	if err != nil {
 		return "", nil, err
 	}
-	number, err := strconv.ParseFloat(sc.Term, 64)
+	term := strings.Join(sc.Terms, " ")
+	number, err := strconv.ParseFloat(term, 64)
 	if err != nil {
-		return "", nil, &PgError{message: fmt.Sprintf("invalid number %s", sc.Term)}
+		return "", nil, &PgError{message: fmt.Sprintf("invalid number %s", term)}
 	}
 	return f.column + " " + relOrdered + fmt.Sprintf(" $%d", queryArgumentIndex), []any{number}, nil
 }

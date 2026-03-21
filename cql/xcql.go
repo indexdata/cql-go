@@ -74,9 +74,11 @@ func (xcql *Xcql) toXmlNode(node Clause, level int) {
 		xcql.pr(0, "</value>\n")
 		xcql.pr(level+1, "</relation>\n")
 		xcql.toXmlMod(node.SearchClause.Modifiers, level+1)
-		xcql.pr(level+1, "<term>")
-		xcql.cdata(node.SearchClause.Term)
-		xcql.pr(0, "</term>\n")
+		for _, term := range node.SearchClause.Terms {
+			xcql.pr(level+1, "<term>")
+			xcql.cdata(term)
+			xcql.pr(0, "</term>\n")
+		}
 		xcql.pr(level, "</searchClause>\n")
 	} else if node.BoolClause != nil {
 		xcql.pr(level, "<triple>\n")

@@ -42,7 +42,10 @@ func (f *FieldCommon) handleOrderedRelation(sc cql.SearchClause) (string, error)
 }
 
 func (f *FieldCommon) handleEmptyTerm(sc cql.SearchClause) string {
-	if sc.Term == "" && sc.Relation == cql.EQ {
+	if len(sc.Terms) == 0 {
+		return "FALSE"
+	}
+	if len(sc.Terms) == 1 && sc.Terms[0] == "" && sc.Relation == cql.EQ {
 		return f.column + " IS NOT NULL"
 	}
 	return ""

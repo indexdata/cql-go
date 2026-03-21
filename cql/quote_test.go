@@ -30,14 +30,14 @@ func TestQuote(t *testing.T) {
 						Left: Clause{
 							SearchClause: &SearchClause{
 								Index: "idx",
-								Term:  tt.in,
+								Terms: []string{tt.in},
 							},
 						},
 						Operator: AND,
 						Right: Clause{
 							SearchClause: &SearchClause{
 								Index: "idx2",
-								Term:  "val2",
+								Terms: []string{"val2"},
 							},
 						},
 					},
