@@ -65,6 +65,8 @@ func TestParsing(t *testing.T) {
 	full := &FieldString{}
 	full.WithFullText("english").WithServerChoiceRel(cql.ALL)
 
+	tsvector := NewFieldTsVector().WithLanguage("english").WithServerChoiceRel(cql.ALL)
+
 	serverChoice := NewFieldCombo(true, []Field{full, title, author})
 	anyf := NewFieldCombo(false, []Field{full, title, author})
 	alwaysTrue := NewFieldCombo(true, []Field{})
@@ -72,9 +74,11 @@ func TestParsing(t *testing.T) {
 	def.AddField("title", title).
 		AddField("author", author).
 		AddField("cql.serverChoice", serverChoice).
-		AddField("full", full).AddField("tag", tag).
+		AddField("full", full).
+		AddField("tag", tag).
 		AddField("any", anyf).
-		AddField("alwaysTrue", alwaysTrue)
+		AddField("alwaysTrue", alwaysTrue).
+		AddField("tsvector", tsvector)
 
 	price := NewFieldNumber()
 	def.AddField("price", price)
@@ -204,6 +208,16 @@ func TestParsing(t *testing.T) {
 		{"bool = no", "bool = $1", []any{false}},
 		{"bool > true", "error: unsupported relation >", nil},
 		{"bool = T", "error: invalid bool T", nil},
+		{"tsvector = abc", "tsvector @@ to_tsquery('english', $1)", []any{"'abc'"}},
+		{"tsvector = \"abc\"", "tsvector @@ to_tsquery('english', $1)", []any{"'abc'"}},
+		{"tsvector = \"abc \"", "tsvector @@ to_tsquery('english', $1)", []any{"'abc'"}},
+		{"tsvector adj \"a b\"", "tsvector @@ to_tsquery('english', $1)", []any{"'a'<->'b'"}},
+		{"tsvector all \"a b\"", "tsvector @@ to_tsquery('english', $1)", []any{"'a'&'b'"}},
+		{"tsvector = \"a b\"", "tsvector @@ to_tsquery('english', $1)", []any{"'a'&'b'"}},
+		{"tsvector scr \"a b\"", "tsvector @@ to_tsquery('english', $1)", []any{"'a'&'b'"}},
+		{"tsvector any \"a b\"", "tsvector @@ to_tsquery('english', $1)", []any{"'a'|'b'"}},
+		{"tsvector=\"a*\"", "error: masking op * unsupported", nil},
+		{"tsvector > x", "error: unsupported relation >", nil},
 	} {
 		var parser cql.Parser
 		q, err := parser.Parse(testcase.query)
