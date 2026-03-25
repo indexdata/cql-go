@@ -89,7 +89,7 @@ func TestPgx(t *testing.T) {
 	rows.Close()
 
 	rows, err = conn.Query(ctx, "INSERT INTO mytable (title, author, tag, year, address, start_date, created_at, publisher_id, is_active, full_vector) "+
-		"VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, to_tsvector('english',$10))", "the TeXbook", "d. e. knuth", "tag2", 1984,
+		"VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, to_tsvector('german',$10))", "the TeXbook", "d. e. knuth", "tag2", 1984,
 		`{"city": "Stanford", "country": "USA", "zip": 67890}`, "2026-03-06", "2026-03-06 09:34:27", uuid1, false, "Here is some text2")
 	assert.NoError(t, err, "failed to insert data")
 	rows.Close()
@@ -114,7 +114,7 @@ func TestPgx(t *testing.T) {
 		def.AddField("start_date", NewFieldDate().WithOnlyDate())
 		def.AddField("created_at", NewFieldDate())
 		def.AddField("is_active", NewFieldBool())
-		def.AddField("full_vector", NewFieldTsVector().WithLanguage("english").WithServerChoiceRel(cql.ALL))
+		def.AddField("full_vector", NewFieldTsVector().WithLanguage("german").WithServerChoiceRel(cql.ALL))
 
 		var parser cql.Parser
 		for _, testcase := range []struct {
@@ -172,6 +172,10 @@ func TestPgx(t *testing.T) {
 			{"is_active = 0", []int{2}},
 			{"full_vector all \"some text2\"", []int{2}},
 			{"full_vector any \"text2 text1\"", []int{1, 2}},
+			{"full_vector any \"here is some\"", []int{2}},
+			{"full_vector adj \"here is some text1\"", []int{}}, // adj does not work with german language, because of stop words
+			{"full_vector adj \"here is some text2\"", []int{2}},
+			{"full_vector adj \"her is some text2\"", []int{2}},
 		} {
 			runQuery(t, parser, conn, ctx, def, testcase.query, testcase.expectedIds)
 		}
