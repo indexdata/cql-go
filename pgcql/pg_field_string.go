@@ -9,11 +9,12 @@ import (
 
 type FieldString struct {
 	FieldCommon
-	language        string
-	enableLike      bool
-	enableExact     bool
-	enableSplit     bool
-	serverChoiceRel cql.Relation
+	language         string
+	disableTsConvert bool
+	enableLike       bool
+	enableExact      bool
+	enableSplit      bool
+	serverChoiceRel  cql.Relation
 }
 
 func NewFieldString() *FieldString {
@@ -52,6 +53,11 @@ func (f *FieldString) WithSplit() *FieldString {
 
 func (f *FieldString) WithServerChoiceRel(relation cql.Relation) *FieldString {
 	f.serverChoiceRel = relation
+	return f
+}
+
+func (f *FieldString) WithDisableTsConvert() *FieldString {
+	f.disableTsConvert = true
 	return f
 }
 
@@ -164,7 +170,13 @@ func (f *FieldString) generateTsQuery(sc cql.SearchClause, termOp string, queryA
 	for i, v := range pgTerms {
 		pgTerms[i] = "'" + strings.ReplaceAll(v, "'", "''") + "'"
 	}
-	sql := "to_tsvector('" + f.language + "', " + f.column + ") @@ to_tsquery('" + f.language + "', " + fmt.Sprintf("$%d", queryArgumentIndex) + ")"
+	sql := ""
+	if f.disableTsConvert {
+		sql += f.column + " "
+	} else {
+		sql += "to_tsvector('" + f.language + "', " + f.column + ") "
+	}
+	sql += "@@ to_tsquery('" + f.language + "', " + fmt.Sprintf("$%d", queryArgumentIndex) + ")"
 	return sql, []any{strings.Join(pgTerms, termOp)}, nil
 }
 
