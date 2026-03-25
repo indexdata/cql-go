@@ -9,11 +9,12 @@ import (
 
 type FieldString struct {
 	FieldCommon
-	language    string
-	enableLike  bool
-	enableExact bool
-	enableSplit bool
-	eqMap       cql.Relation
+	language        string
+	assumeTsVector  bool
+	enableLike      bool
+	enableExact     bool
+	enableSplit     bool
+	serverChoiceRel cql.Relation
 }
 
 func NewFieldString() *FieldString {
@@ -50,8 +51,13 @@ func (f *FieldString) WithSplit() *FieldString {
 	return f
 }
 
-func (f *FieldString) WithEqMap(relation cql.Relation) *FieldString {
-	f.eqMap = relation
+func (f *FieldString) WithServerChoiceRel(relation cql.Relation) *FieldString {
+	f.serverChoiceRel = relation
+	return f
+}
+
+func (f *FieldString) WithAssumeTsVector() *FieldString {
+	f.assumeTsVector = true
 	return f
 }
 
@@ -157,7 +163,13 @@ func (f *FieldString) generateTsQuery(sc cql.SearchClause, termOp string, queryA
 	for i, v := range pgTerms {
 		pgTerms[i] = "'" + strings.ReplaceAll(v, "'", "''") + "'"
 	}
-	sql := "to_tsvector('" + f.language + "', " + f.column + ") @@ to_tsquery('" + f.language + "', " + fmt.Sprintf("$%d", queryArgumentIndex) + ")"
+	sql := ""
+	if f.assumeTsVector {
+		sql += f.column + " "
+	} else {
+		sql += "to_tsvector('" + f.language + "', " + f.column + ") "
+	}
+	sql += "@@ to_tsquery('" + f.language + "', " + fmt.Sprintf("$%d", queryArgumentIndex) + ")"
 	return sql, []any{strings.Join(pgTerms, termOp)}, nil
 }
 
@@ -188,8 +200,8 @@ func (f *FieldString) Generate(sc cql.SearchClause, queryArgumentIndex int) (str
 	if sql != "" {
 		return sql, nil, nil
 	}
-	if f.eqMap != "" && sc.Relation == cql.EQ {
-		sc.Relation = f.eqMap
+	if f.serverChoiceRel != "" && (sc.Relation == cql.EQ || sc.Relation == cql.SCR) {
+		sc.Relation = f.serverChoiceRel
 	}
 	fulltext := f.language != ""
 	if fulltext {
