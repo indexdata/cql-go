@@ -9,12 +9,12 @@ import (
 
 type FieldString struct {
 	FieldCommon
-	language         string
-	disableTsConvert bool
-	enableLike       bool
-	enableExact      bool
-	enableSplit      bool
-	serverChoiceRel  cql.Relation
+	language        string
+	assumeTsVector  bool
+	enableLike      bool
+	enableExact     bool
+	enableSplit     bool
+	serverChoiceRel cql.Relation
 }
 
 func NewFieldString() *FieldString {
@@ -56,8 +56,8 @@ func (f *FieldString) WithServerChoiceRel(relation cql.Relation) *FieldString {
 	return f
 }
 
-func (f *FieldString) WithDisableTsConvert() *FieldString {
-	f.disableTsConvert = true
+func (f *FieldString) WithAssumeTsVector() *FieldString {
+	f.assumeTsVector = true
 	return f
 }
 
@@ -171,7 +171,7 @@ func (f *FieldString) generateTsQuery(sc cql.SearchClause, termOp string, queryA
 		pgTerms[i] = "'" + strings.ReplaceAll(v, "'", "''") + "'"
 	}
 	sql := ""
-	if f.disableTsConvert {
+	if f.assumeTsVector {
 		sql += f.column + " "
 	} else {
 		sql += "to_tsvector('" + f.language + "', " + f.column + ") "

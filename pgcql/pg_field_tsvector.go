@@ -9,7 +9,7 @@ type FieldTsVector struct {
 }
 
 func NewFieldTsVector() *FieldTsVector {
-	return &FieldTsVector{FieldString{language: "simple", disableTsConvert: true}}
+	return &FieldTsVector{FieldString{language: "simple", assumeTsVector: true}}
 }
 
 func (f *FieldTsVector) WithColumn(column string) *FieldTsVector {
