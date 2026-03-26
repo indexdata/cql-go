@@ -155,13 +155,6 @@ func maskedLike(cqlTerm string) (string, bool, error) {
 	return string(pgTerm), ops, nil
 }
 
-func (f *FieldString) handleEmptyTerm(sc cql.SearchClause) string {
-	if sc.Term == "" && sc.Relation == cql.EQ {
-		return f.column + " IS NOT NULL"
-	}
-	return ""
-}
-
 func (f *FieldString) generateTsQuery(sc cql.SearchClause, termOp string, queryArgumentIndex int) (string, []any, error) {
 	pgTerms, err := maskedSplit(sc.Term, " ")
 	if err != nil {
