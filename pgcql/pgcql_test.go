@@ -75,7 +75,7 @@ func TestParsing(t *testing.T) {
 		AddField("author", author).
 		AddField("cql.serverChoice", serverChoice).
 		AddField("full", full).
-		AddField("tag", tag).
+		AddField("Tag", tag).
 		AddField("any", anyf).
 		AddField("alwaysTrue", alwaysTrue).
 		AddField("tsvector", tsvector)
@@ -101,6 +101,7 @@ func TestParsing(t *testing.T) {
 		expectedArgs []any
 	}{
 		{"tag = abc", "T = $1", []any{"abc"}},
+		{"TaG = abc", "T = $1", []any{"abc"}},
 		{"tag = \"\"", "T IS NOT NULL", []any{}},
 		{"au=2", "error: unknown field au", nil},
 		{"title>2", "error: unsupported relation >", nil},
