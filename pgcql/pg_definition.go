@@ -1,6 +1,10 @@
 package pgcql
 
-import "github.com/indexdata/cql-go/cql"
+import (
+	"strings"
+
+	"github.com/indexdata/cql-go/cql"
+)
 
 type PgDefinition struct {
 	fields map[string]Field
@@ -17,12 +21,12 @@ func (pg *PgDefinition) AddField(name string, field Field) Definition {
 	if pg.fields == nil {
 		pg.fields = make(map[string]Field)
 	}
-	pg.fields[name] = field
+	pg.fields[strings.ToLower(name)] = field
 	return pg
 }
 
 func (pg *PgDefinition) GetFieldType(name string) Field {
-	if field, ok := pg.fields[name]; ok {
+	if field, ok := pg.fields[strings.ToLower(name)]; ok {
 		return field
 	}
 	return nil
