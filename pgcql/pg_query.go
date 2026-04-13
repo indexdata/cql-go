@@ -48,17 +48,17 @@ func (p *PgQuery) parseSortSpec(sortSpec []cql.Sort) error {
 		}
 		p.orderByClause += sort
 		p.orderByFields = append(p.orderByFields, sort)
-		dir := "DESC"
+		dir := ""
 		for _, modifier := range sortField.Modifiers {
 			if strings.EqualFold(modifier.Name, "sort.ascending") {
-				dir = "ASC"
+				dir = ""
 			} else if strings.EqualFold(modifier.Name, "sort.descending") {
-				dir = "DESC"
+				dir = " DESC"
 			} else {
 				return &PgError{message: fmt.Sprintf("unsupported sort modifier %s", modifier.Name)}
 			}
 		}
-		p.orderByClause += " " + dir
+		p.orderByClause += dir
 	}
 	return nil
 }

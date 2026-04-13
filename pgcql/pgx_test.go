@@ -125,9 +125,9 @@ func TestPgx(t *testing.T) {
 			{"title = \"the texbook\"", []int{}},
 			{"title = \"the \"", []int{}},
 			{"title = \"\"", []int{1, 2, 3}},
-			{"title = \"\" sortby title", []int{2, 1, 3}},
-			{"title = \"\" sortby title/sort.ascending", []int{3, 1, 2}},
-			{"title = \"\" sortby country title", []int{2, 1, 3}},
+			{"title = \"\" sortby title", []int{3, 1, 2}},
+			{"title = \"\" sortby title/sort.descending", []int{2, 1, 3}},
+			{"title = \"\" sortby country title", []int{3, 1, 2}},
 			{"author = \"\"", []int{1, 2}},
 			{"title = \"the art of computer programming, volume 1\"", []int{1}},
 			{"title = \"the art of computer programming, volume\"", []int{}},
@@ -280,7 +280,7 @@ func TestPgx(t *testing.T) {
 			{"\"the TeXbook\"", []int{2}},
 			{"\"Addision Wesley\"", []int{1, 2}},
 			{"\"Unknown publisher\"", []int{3}},
-			{"cql.allRecords=1 sortby publisher", []int{3, 1, 2}},
+			{"cql.allRecords=1 sortby publisher", []int{1, 2, 3}},
 		} {
 			runQuery(t, parser, conn, ctx, def, testcase.query, testcase.expectedIds)
 		}
