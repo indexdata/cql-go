@@ -16,6 +16,7 @@ type FieldString struct {
 	enableILike     bool
 	enableExact     bool
 	enableSplit     bool
+	prefixMatch     bool
 	serverChoiceRel cql.Relation
 }
 
@@ -50,6 +51,13 @@ func (f *FieldString) WithILikeOps() *FieldString {
 	f.enableExact = false
 	f.enableILike = true
 	f.enableLike = false
+	return f
+}
+
+// WithPrefixMatch allows wildcard operators only at the end of a term.
+// Applies to WithLikeOps/WithILikeOps matching.
+func (f *FieldString) WithPrefixMatch() *FieldString {
+	f.prefixMatch = true
 	return f
 }
 
@@ -229,13 +237,17 @@ func maskedSplitTsTerms(cqlTerm string, splitChars string) ([]string, error) {
 	return terms, nil
 }
 
-func maskedLike(cqlTerm string) (string, bool, error) {
+func maskedLike(cqlTerm string, prefixMatch bool) (string, bool, error) {
 	var pgTerm []rune
 	ops := false
 	backslash := false
+	wildcard := false
 
 	for _, c := range cqlTerm {
 		if backslash {
+			if prefixMatch && wildcard {
+				return "", false, fmt.Errorf("masking ops * and ? supported only at end of term")
+			}
 			switch c {
 			case '*', '?', '^', '"':
 				pgTerm = append(pgTerm, c)
@@ -248,11 +260,23 @@ func maskedLike(cqlTerm string) (string, bool, error) {
 		} else {
 			switch c {
 			case '*':
+				if prefixMatch && wildcard {
+					return "", false, fmt.Errorf("masking ops * and ? supported only at end of term")
+				}
 				pgTerm = append(pgTerm, '%')
 				ops = true
+				if prefixMatch {
+					wildcard = true
+				}
 			case '?':
+				if prefixMatch && wildcard {
+					return "", false, fmt.Errorf("masking ops * and ? supported only at end of term")
+				}
 				pgTerm = append(pgTerm, '_')
 				ops = true
+				if prefixMatch {
+					wildcard = true
+				}
 			case '^':
 				return "", false, fmt.Errorf("anchor op ^ unsupported")
 			case '\\':
@@ -260,6 +284,9 @@ func maskedLike(cqlTerm string) (string, bool, error) {
 			case '%', '_':
 				pgTerm = append(pgTerm, '\\', c)
 			default:
+				if prefixMatch && wildcard {
+					return "", false, fmt.Errorf("masking ops * and ? supported only at end of term")
+				}
 				pgTerm = append(pgTerm, c)
 			}
 		}
@@ -335,7 +362,7 @@ func (f *FieldString) Generate(sc cql.SearchClause, queryArgumentIndex int) (str
 		}
 	}
 	if (f.enableLike || f.enableILike) && (sc.Relation == cql.EQ || sc.Relation == cql.EXACT || sc.Relation == cql.NE) {
-		pgTerm, ops, err := maskedLike(sc.Term)
+		pgTerm, ops, err := maskedLike(sc.Term, f.prefixMatch)
 		if err != nil {
 			return "", nil, err
 		}

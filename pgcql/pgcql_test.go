@@ -59,6 +59,7 @@ func TestParsing(t *testing.T) {
 
 	author := NewFieldString().WithLikeOps().WithColumn("Author")
 	authorLikeOnly := NewFieldString().WithLikeOps().WithoutExact().WithColumn("Author")
+	authorPrefix := NewFieldString().WithLikeOps().WithPrefixMatch().WithColumn("Author")
 	authorLower := NewFieldString().WithLikeOps().WithLower().WithColumn("Author")
 	authori := NewFieldString().WithILikeOps().WithColumn("Author")
 	authoriLower := NewFieldString().WithILikeOps().WithLower().WithColumn("Author")
@@ -80,6 +81,7 @@ func TestParsing(t *testing.T) {
 	def.AddField("title", title).
 		AddField("author", author).
 		AddField("authorLikeOnly", authorLikeOnly).
+		AddField("authorPrefix", authorPrefix).
 		AddField("authorLower", authorLower).
 		AddField("titleLower", titleLower).
 		AddField("authori", authori).
@@ -135,6 +137,12 @@ func TestParsing(t *testing.T) {
 		{"authorLikeOnly <> \"test*\"", "Author NOT LIKE $1", []any{"test%"}},
 		{"authorLikeOnly = Test", "Author LIKE $1", []any{"Test"}},
 		{"authorLikeOnly <> Test", "Author NOT LIKE $1", []any{"Test"}},
+		{"authorPrefix = \"test*\"", "Author LIKE $1", []any{"test%"}},
+		{"authorPrefix = \"te?\"", "Author LIKE $1", []any{"te_"}},
+		{"authorPrefix = \"*test\"", "error: masking ops * and ? supported only at end of term", nil},
+		{"authorPrefix = \"te*st\"", "error: masking ops * and ? supported only at end of term", nil},
+		{"authorPrefix = \"te?s\"", "error: masking ops * and ? supported only at end of term", nil},
+		{"authorPrefix = \"te\\*st\"", "Author = $1", []any{"te*st"}},
 		{"authorLower = \"test*\"", "lower(Author) LIKE lower($1)", []any{"test%"}},
 		{"authorLower <> \"test*\"", "lower(Author) NOT LIKE lower($1)", []any{"test%"}},
 		{"authorLower = Test", "lower(Author) = lower($1)", []any{"Test"}},
