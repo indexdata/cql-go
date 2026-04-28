@@ -58,6 +58,7 @@ func TestParsing(t *testing.T) {
 	assert.Equal(t, title.GetColumn(), "Title", "GetColumn() should return the column name")
 
 	author := NewFieldString().WithLikeOps().WithColumn("Author")
+	authorLikeOnly := NewFieldString().WithLikeOps().WithoutExact().WithColumn("Author")
 	authorLower := NewFieldString().WithLikeOps().WithLower().WithColumn("Author")
 	authori := NewFieldString().WithILikeOps().WithColumn("Author")
 	authoriLower := NewFieldString().WithILikeOps().WithLower().WithColumn("Author")
@@ -78,6 +79,7 @@ func TestParsing(t *testing.T) {
 
 	def.AddField("title", title).
 		AddField("author", author).
+		AddField("authorLikeOnly", authorLikeOnly).
 		AddField("authorLower", authorLower).
 		AddField("titleLower", titleLower).
 		AddField("authori", authori).
@@ -129,6 +131,10 @@ func TestParsing(t *testing.T) {
 		{"author <> \"test\"", "Author <> $1", []any{"test"}},
 		{"author = \"test*\"", "Author LIKE $1", []any{"test%"}},
 		{"author <> \"test*\"", "Author NOT LIKE $1", []any{"test%"}},
+		{"authorLikeOnly = \"test*\"", "Author LIKE $1", []any{"test%"}},
+		{"authorLikeOnly <> \"test*\"", "Author NOT LIKE $1", []any{"test%"}},
+		{"authorLikeOnly = Test", "Author LIKE $1", []any{"Test"}},
+		{"authorLikeOnly <> Test", "Author NOT LIKE $1", []any{"Test"}},
 		{"authorLower = \"test*\"", "lower(Author) LIKE lower($1)", []any{"test%"}},
 		{"authorLower <> \"test*\"", "lower(Author) NOT LIKE lower($1)", []any{"test%"}},
 		{"authorLower = Test", "lower(Author) = lower($1)", []any{"Test"}},

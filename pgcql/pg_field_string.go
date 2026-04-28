@@ -58,6 +58,11 @@ func (f *FieldString) WithExact() *FieldString {
 	return f
 }
 
+func (f *FieldString) WithoutExact() *FieldString {
+	f.enableExact = false
+	return f
+}
+
 func (f *FieldString) WithSplit() *FieldString {
 	f.enableSplit = true
 	return f
