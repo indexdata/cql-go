@@ -39,12 +39,14 @@ func (f *FieldString) WithFullText(language string) *FieldString {
 func (f *FieldString) WithLikeOps() *FieldString {
 	f.enableExact = true
 	f.enableLike = true
+	f.enableILike = false
 	return f
 }
 
 func (f *FieldString) WithILikeOps() *FieldString {
 	f.enableExact = true
 	f.enableILike = true
+	f.enableLike = false
 	return f
 }
 
