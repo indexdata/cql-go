@@ -58,6 +58,7 @@ func TestParsing(t *testing.T) {
 	assert.Equal(t, title.GetColumn(), "Title", "GetColumn() should return the column name")
 
 	author := NewFieldString().WithLikeOps().WithColumn("Author")
+	authori := NewFieldString().WithILikeOps().WithColumn("Author")
 
 	tag := &FieldString{}
 	tag.WithSplit().WithExact().SetColumn("T")
@@ -73,6 +74,7 @@ func TestParsing(t *testing.T) {
 
 	def.AddField("title", title).
 		AddField("author", author).
+		AddField("authori", authori).
 		AddField("cql.serverChoice", serverChoice).
 		AddField("full", full).
 		AddField("Tag", tag).
@@ -119,6 +121,8 @@ func TestParsing(t *testing.T) {
 		{"author <> \"test\"", "Author <> $1", []any{"test"}},
 		{"author = \"test*\"", "Author LIKE $1", []any{"test%"}},
 		{"author <> \"test*\"", "Author NOT LIKE $1", []any{"test%"}},
+		{"authori = \"test*\"", "Author ILIKE $1", []any{"test%"}},
+		{"authori <> \"test*\"", "Author NOT ILIKE $1", []any{"test%"}},
 		{"title = a AND author = b c", "Title = $1 AND Author = $2", []any{"a", "b c"}},
 		{"title = 'a' OR author = 'b'", "Title = $1 OR Author = $2", []any{"'a'", "'b'"}},
 		{"title = a NOT author = b", "Title = $1 AND NOT Author = $2", []any{"a", "b"}},
