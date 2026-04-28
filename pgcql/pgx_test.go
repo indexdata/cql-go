@@ -215,6 +215,7 @@ func TestPgx(t *testing.T) {
 			expectedIds []int
 		}{
 			{"title = \"the TeXbook\"", []int{2}},
+			{"title = \"Tex*\"", []int{2}},
 			{"title = \"the Texbook\"", []int{2}},
 			{"title = \"Texbook\"", []int{2}},
 			{"title = \"Texboo\"", []int{}},

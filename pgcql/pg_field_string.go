@@ -61,6 +61,15 @@ func (f *FieldString) WithAssumeTsVector() *FieldString {
 	return f
 }
 
+func appendMaskedChar(pgTerm []rune, c rune) ([]rune, error) {
+	switch c {
+	case '*', '"', '?', '^', '\\':
+		return append(pgTerm, c), nil
+	default:
+		return pgTerm, fmt.Errorf("a masking backslash in a CQL string must be followed by *, ?, ^, \" or \\")
+	}
+}
+
 func maskedExact(cqlTerm string) (string, error) {
 	terms, err := maskedSplit(cqlTerm, "")
 	if err != nil {
@@ -76,11 +85,10 @@ func maskedSplit(cqlTerm string, splitChars string) ([]string, error) {
 
 	for _, c := range cqlTerm {
 		if backslash {
-			switch c {
-			case '*', '"', '?', '^', '\\':
-				pgTerm = append(pgTerm, c)
-			default:
-				return terms, fmt.Errorf("a masking backslash in a CQL string must be followed by *, ?, ^, \" or \\")
+			var err error
+			pgTerm, err = appendMaskedChar(pgTerm, c)
+			if err != nil {
+				return terms, err
 			}
 			backslash = false
 		} else {
@@ -110,6 +118,75 @@ func maskedSplit(cqlTerm string, splitChars string) ([]string, error) {
 	}
 	if len(pgTerm) > 0 || len(terms) == 0 {
 		terms = append(terms, string(pgTerm))
+	}
+	return terms, nil
+}
+
+func maskedSplitTsTerms(cqlTerm string, splitChars string) ([]string, error) {
+	terms := make([]string, 0)
+	var pgTerm []rune
+	backslash := false
+	wildcard := false
+
+	appendTerm := func() {
+		if len(pgTerm) == 0 {
+			return
+		}
+		term := "'" + strings.ReplaceAll(string(pgTerm), "'", "''") + "'"
+		if wildcard {
+			term += ":*"
+		}
+		terms = append(terms, term)
+		pgTerm = []rune{}
+		wildcard = false
+	}
+
+	for _, c := range cqlTerm {
+		if backslash {
+			if wildcard {
+				return terms, fmt.Errorf("masking op * supported only at end of term")
+			}
+			var err error
+			pgTerm, err = appendMaskedChar(pgTerm, c)
+			if err != nil {
+				return terms, err
+			}
+			backslash = false
+			continue
+		}
+
+		switch c {
+		case '*':
+			if wildcard {
+				return terms, fmt.Errorf("masking op * supported only at end of term")
+			}
+			if len(pgTerm) == 0 {
+				return terms, fmt.Errorf("masking op * unsupported")
+			}
+			wildcard = true
+		case '?':
+			return terms, fmt.Errorf("masking op ? unsupported")
+		case '^':
+			return terms, fmt.Errorf("anchor op ^ unsupported")
+		case '\\':
+			backslash = true
+		default:
+			if strings.ContainsRune(splitChars, c) {
+				appendTerm()
+				continue
+			}
+			if wildcard {
+				return terms, fmt.Errorf("masking op * supported only at end of term")
+			}
+			pgTerm = append(pgTerm, c)
+		}
+	}
+	if backslash {
+		return terms, fmt.Errorf("a CQL string must not end with a masking backslash")
+	}
+	appendTerm()
+	if len(terms) == 0 {
+		terms = append(terms, "''")
 	}
 	return terms, nil
 }
@@ -156,12 +233,9 @@ func maskedLike(cqlTerm string) (string, bool, error) {
 }
 
 func (f *FieldString) generateTsQuery(sc cql.SearchClause, termOp string, queryArgumentIndex int) (string, []any, error) {
-	pgTerms, err := maskedSplit(sc.Term, " ")
+	pgTerms, err := maskedSplitTsTerms(sc.Term, " ")
 	if err != nil {
 		return "", nil, err
-	}
-	for i, v := range pgTerms {
-		pgTerms[i] = "'" + strings.ReplaceAll(v, "'", "''") + "'"
 	}
 	sql := ""
 	if f.assumeTsVector {
