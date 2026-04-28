@@ -16,7 +16,7 @@ type FieldString struct {
 	enableILike     bool
 	enableExact     bool
 	enableSplit     bool
-	prefixMatch     bool
+	prefixMatchOnly bool
 	serverChoiceRel cql.Relation
 }
 
@@ -46,7 +46,7 @@ func (f *FieldString) WithLikeOps() *FieldString {
 }
 
 // WithILikeOps enables wildcard-aware case-insensitive matching and disables exact match fallback.
-// For good performance, this is typically paired with a pg_trgm GIN/GiST index.
+// This typically requires a pg_trgm (trigram) GIN/GiST index for good performance.
 func (f *FieldString) WithILikeOps() *FieldString {
 	f.enableExact = false
 	f.enableILike = true
@@ -54,18 +54,21 @@ func (f *FieldString) WithILikeOps() *FieldString {
 	return f
 }
 
-// WithPrefixMatch allows wildcard operators only at the end of a term.
+// WithPrefixMatchOnly allows wildcard operators only at the end of a term.
 // Applies to WithLikeOps/WithILikeOps matching.
-func (f *FieldString) WithPrefixMatch() *FieldString {
-	f.prefixMatch = true
+// This is useful when the underlying column is indexed with a regular btree index with text_pattern_ops/varchar_pattern_ops, which does not support leading wildcards.
+func (f *FieldString) WithPrefixMatchOnly() *FieldString {
+	f.prefixMatchOnly = true
 	return f
 }
 
+// WithExact enables exact match and using it as a fallback for WithLikeOps when no wildcard operators are used in the term.
 func (f *FieldString) WithExact() *FieldString {
 	f.enableExact = true
 	return f
 }
 
+// WithoutExact disables exact match and using it as fallback for WithLikeOps when no wildcard operators are used in the term.
 func (f *FieldString) WithoutExact() *FieldString {
 	f.enableExact = false
 	return f
@@ -76,11 +79,13 @@ func (f *FieldString) WithSplit() *FieldString {
 	return f
 }
 
+// WithServerChoiceRel configures the server choice relation
 func (f *FieldString) WithServerChoiceRel(relation cql.Relation) *FieldString {
 	f.serverChoiceRel = relation
 	return f
 }
 
+// WithAssumeTsVector assumes underlying column of type tsvector and uses it directly.
 func (f *FieldString) WithAssumeTsVector() *FieldString {
 	f.assumeTsVector = true
 	return f
@@ -200,12 +205,20 @@ func maskedSplitTsTerms(cqlTerm string, splitChars string) ([]string, error) {
 			backslash = false
 			continue
 		}
+		if wildcard {
+			if strings.ContainsRune(splitChars, c) {
+				appendTerm()
+				continue
+			}
+			if c == '\\' {
+				backslash = true
+				continue
+			}
+			return terms, fmt.Errorf("masking op * supported only at end of term")
+		}
 
 		switch c {
 		case '*':
-			if wildcard {
-				return terms, fmt.Errorf("masking op * supported only at end of term")
-			}
 			if len(pgTerm) == 0 {
 				return terms, fmt.Errorf("masking op * unsupported")
 			}
@@ -221,9 +234,6 @@ func maskedSplitTsTerms(cqlTerm string, splitChars string) ([]string, error) {
 				appendTerm()
 				continue
 			}
-			if wildcard {
-				return terms, fmt.Errorf("masking op * supported only at end of term")
-			}
 			pgTerm = append(pgTerm, c)
 		}
 	}
@@ -237,7 +247,7 @@ func maskedSplitTsTerms(cqlTerm string, splitChars string) ([]string, error) {
 	return terms, nil
 }
 
-func maskedLike(cqlTerm string, prefixMatch bool) (string, bool, error) {
+func maskedLike(cqlTerm string, prefixMatchOnly bool) (string, bool, error) {
 	var pgTerm []rune
 	ops := false
 	backslash := false
@@ -245,7 +255,7 @@ func maskedLike(cqlTerm string, prefixMatch bool) (string, bool, error) {
 
 	for _, c := range cqlTerm {
 		if backslash {
-			if prefixMatch && wildcard {
+			if prefixMatchOnly && wildcard {
 				return "", false, fmt.Errorf("masking ops * and ? supported only at end of term")
 			}
 			switch c {
@@ -258,23 +268,24 @@ func maskedLike(cqlTerm string, prefixMatch bool) (string, bool, error) {
 			}
 			backslash = false
 		} else {
+			if prefixMatchOnly && wildcard {
+				if c == '\\' {
+					backslash = true
+					continue
+				}
+				return "", false, fmt.Errorf("masking ops * and ? supported only at end of term")
+			}
 			switch c {
 			case '*':
-				if prefixMatch && wildcard {
-					return "", false, fmt.Errorf("masking ops * and ? supported only at end of term")
-				}
 				pgTerm = append(pgTerm, '%')
 				ops = true
-				if prefixMatch {
+				if prefixMatchOnly {
 					wildcard = true
 				}
 			case '?':
-				if prefixMatch && wildcard {
-					return "", false, fmt.Errorf("masking ops * and ? supported only at end of term")
-				}
 				pgTerm = append(pgTerm, '_')
 				ops = true
-				if prefixMatch {
+				if prefixMatchOnly {
 					wildcard = true
 				}
 			case '^':
@@ -284,9 +295,6 @@ func maskedLike(cqlTerm string, prefixMatch bool) (string, bool, error) {
 			case '%', '_':
 				pgTerm = append(pgTerm, '\\', c)
 			default:
-				if prefixMatch && wildcard {
-					return "", false, fmt.Errorf("masking ops * and ? supported only at end of term")
-				}
 				pgTerm = append(pgTerm, c)
 			}
 		}
@@ -362,7 +370,7 @@ func (f *FieldString) Generate(sc cql.SearchClause, queryArgumentIndex int) (str
 		}
 	}
 	if (f.enableLike || f.enableILike) && (sc.Relation == cql.EQ || sc.Relation == cql.EXACT || sc.Relation == cql.NE) {
-		pgTerm, ops, err := maskedLike(sc.Term, f.prefixMatch)
+		pgTerm, ops, err := maskedLike(sc.Term, f.prefixMatchOnly)
 		if err != nil {
 			return "", nil, err
 		}

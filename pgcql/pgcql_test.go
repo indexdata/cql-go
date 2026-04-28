@@ -50,6 +50,16 @@ func TestOrderByFields(t *testing.T) {
 	}
 }
 
+func TestMaskedLikePrefixTrailingBackslash(t *testing.T) {
+	_, _, err := maskedLike("te*\\", true)
+	assert.EqualError(t, err, "a CQL string must not end with a masking backslash")
+}
+
+func TestMaskedSplitTsTermsTrailingBackslashAfterWildcard(t *testing.T) {
+	_, err := maskedSplitTsTerms("a*\\", " ")
+	assert.EqualError(t, err, "a CQL string must not end with a masking backslash")
+}
+
 func TestParsing(t *testing.T) {
 	def := NewPgDefinition()
 	title := &FieldString{}
@@ -59,7 +69,7 @@ func TestParsing(t *testing.T) {
 
 	author := NewFieldString().WithLikeOps().WithColumn("Author")
 	authorLikeOnly := NewFieldString().WithLikeOps().WithoutExact().WithColumn("Author")
-	authorPrefix := NewFieldString().WithLikeOps().WithPrefixMatch().WithColumn("Author")
+	authorPrefix := NewFieldString().WithLikeOps().WithPrefixMatchOnly().WithColumn("Author")
 	authorLower := NewFieldString().WithLikeOps().WithLower().WithColumn("Author")
 	authori := NewFieldString().WithILikeOps().WithColumn("Author")
 	authoriLower := NewFieldString().WithILikeOps().WithLower().WithColumn("Author")
@@ -142,6 +152,9 @@ func TestParsing(t *testing.T) {
 		{"authorPrefix = \"*test\"", "error: masking ops * and ? supported only at end of term", nil},
 		{"authorPrefix = \"te*st\"", "error: masking ops * and ? supported only at end of term", nil},
 		{"authorPrefix = \"te?s\"", "error: masking ops * and ? supported only at end of term", nil},
+		{"authorPrefix = \"te*\\\\\"", "error: masking ops * and ? supported only at end of term", nil},
+		{"authorPrefix = \"te*\\\\*\"", "error: masking ops * and ? supported only at end of term", nil},
+		{"authorPrefix = \"te*\\\\?\"", "error: masking ops * and ? supported only at end of term", nil},
 		{"authorPrefix = \"te\\*st\"", "Author = $1", []any{"te*st"}},
 		{"authorLower = \"test*\"", "lower(Author) LIKE lower($1)", []any{"test%"}},
 		{"authorLower <> \"test*\"", "lower(Author) NOT LIKE lower($1)", []any{"test%"}},
@@ -183,6 +196,7 @@ func TestParsing(t *testing.T) {
 		{"full = abc", "to_tsvector('english', full) @@ to_tsquery('english', $1)", []any{"'abc'"}},
 		{"full = \"abc\"", "to_tsvector('english', full) @@ to_tsquery('english', $1)", []any{"'abc'"}},
 		{"full = \"abc \"", "to_tsvector('english', full) @@ to_tsquery('english', $1)", []any{"'abc'"}},
+		{"full = \"a*\\\\\"", "error: masking op * supported only at end of term", nil},
 		{"full adj \"a b\"", "to_tsvector('english', full) @@ to_tsquery('english', $1)", []any{"'a'<->'b'"}},
 		{"full all \"a b\"", "to_tsvector('english', full) @@ to_tsquery('english', $1)", []any{"'a'&'b'"}},
 		{"full = \"a b\"", "to_tsvector('english', full) @@ to_tsquery('english', $1)", []any{"'a'&'b'"}},
