@@ -200,6 +200,28 @@ func TestPgx(t *testing.T) {
 		}
 	})
 
+	t.Run("ilike ops", func(t *testing.T) {
+		def := NewPgDefinition()
+
+		def.AddField("title", NewFieldString().WithILikeOps())
+		def.AddField("author", NewFieldString().WithILikeOps())
+		def.AddField("year", NewFieldNumber())
+		def.AddField("city", NewFieldString().WithILikeOps().WithColumn("address->>'city'"))
+
+		var parser cql.Parser
+		for _, testcase := range []struct {
+			query       string
+			expectedIds []int
+		}{
+			{"title = \"the tex*\"", []int{2}},
+			{"title = \"THE TE?BOOK\"", []int{2}},
+			{"city = \"read*\"", []int{1}},
+			{"title <> \"the tex*\"", []int{1, 3}},
+		} {
+			runQuery(t, parser, conn, ctx, def, testcase.query, testcase.expectedIds)
+		}
+	})
+
 	t.Run("fulltext ops", func(t *testing.T) {
 		def := NewPgDefinition()
 

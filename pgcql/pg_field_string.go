@@ -12,6 +12,7 @@ type FieldString struct {
 	language        string
 	assumeTsVector  bool
 	enableLike      bool
+	enableILike     bool
 	enableExact     bool
 	enableSplit     bool
 	serverChoiceRel cql.Relation
@@ -38,6 +39,12 @@ func (f *FieldString) WithFullText(language string) *FieldString {
 func (f *FieldString) WithLikeOps() *FieldString {
 	f.enableExact = true
 	f.enableLike = true
+	return f
+}
+
+func (f *FieldString) WithILikeOps() *FieldString {
+	f.enableExact = true
+	f.enableILike = true
 	return f
 }
 
@@ -225,15 +232,21 @@ func (f *FieldString) Generate(sc cql.SearchClause, queryArgumentIndex int) (str
 	if !f.enableExact {
 		return "", nil, &PgError{message: "unsupported relation " + string(sc.Relation)}
 	}
-	if f.enableLike && (sc.Relation == cql.EQ || sc.Relation == cql.EXACT || sc.Relation == cql.NE) {
+	if (f.enableLike || f.enableILike) && (sc.Relation == cql.EQ || sc.Relation == cql.EXACT || sc.Relation == cql.NE) {
 		pgTerm, ops, err := maskedLike(sc.Term)
 		if err != nil {
 			return "", nil, err
 		}
 		if ops {
 			pgOp := "LIKE"
+			if f.enableILike {
+				pgOp = "ILIKE"
+			}
 			if sc.Relation == cql.NE {
 				pgOp = "NOT LIKE"
+				if f.enableILike {
+					pgOp = "NOT ILIKE"
+				}
 			}
 			return f.column + " " + pgOp + fmt.Sprintf(" $%d", queryArgumentIndex), []any{pgTerm}, nil
 		}
