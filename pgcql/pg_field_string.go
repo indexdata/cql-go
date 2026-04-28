@@ -205,11 +205,11 @@ func maskedSplitTsTerms(cqlTerm string, splitChars string) ([]string, error) {
 			backslash = false
 			continue
 		}
+		if strings.ContainsRune(splitChars, c) {
+			appendTerm()
+			continue
+		}
 		if wildcard {
-			if strings.ContainsRune(splitChars, c) {
-				appendTerm()
-				continue
-			}
 			if c == '\\' {
 				backslash = true
 				continue
@@ -230,10 +230,6 @@ func maskedSplitTsTerms(cqlTerm string, splitChars string) ([]string, error) {
 		case '\\':
 			backslash = true
 		default:
-			if strings.ContainsRune(splitChars, c) {
-				appendTerm()
-				continue
-			}
 			pgTerm = append(pgTerm, c)
 		}
 	}
