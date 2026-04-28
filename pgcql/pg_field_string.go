@@ -11,6 +11,7 @@ type FieldString struct {
 	FieldCommon
 	language        string
 	assumeTsVector  bool
+	enableLower     bool
 	enableLike      bool
 	enableILike     bool
 	enableExact     bool
@@ -43,8 +44,10 @@ func (f *FieldString) WithLikeOps() *FieldString {
 	return f
 }
 
+// WithILikeOps enables wildcard-aware case-insensitive matching and disables exact match fallback.
+// For good performance, this is typically paired with a pg_trgm GIN/GiST index.
 func (f *FieldString) WithILikeOps() *FieldString {
-	f.enableExact = true
+	f.enableExact = false
 	f.enableILike = true
 	f.enableLike = false
 	return f
@@ -52,6 +55,11 @@ func (f *FieldString) WithILikeOps() *FieldString {
 
 func (f *FieldString) WithExact() *FieldString {
 	f.enableExact = true
+	return f
+}
+
+func (f *FieldString) WithoutExact() *FieldString {
+	f.enableExact = false
 	return f
 }
 
@@ -68,6 +76,27 @@ func (f *FieldString) WithServerChoiceRel(relation cql.Relation) *FieldString {
 func (f *FieldString) WithAssumeTsVector() *FieldString {
 	f.assumeTsVector = true
 	return f
+}
+
+// WithLower applies lower() to column and term.
+// Ignored when using WithFullText/WithAssumeTsVector/WithILikeOps.
+func (f *FieldString) WithLower() *FieldString {
+	f.enableLower = true
+	return f
+}
+
+func (f *FieldString) getQueryColumn() string {
+	if f.enableLower {
+		return "lower(" + f.column + ")"
+	}
+	return f.column
+}
+
+func (f *FieldString) getQueryArg(index int) string {
+	if f.enableLower {
+		return "lower(" + fmt.Sprintf("$%d", index) + ")"
+	}
+	return fmt.Sprintf("$%d", index)
 }
 
 func appendMaskedChar(pgTerm []rune, c rune) ([]rune, error) {
@@ -261,7 +290,7 @@ func (f *FieldString) generateIn(sc cql.SearchClause, queryArgumentIndex int, no
 	if err != nil {
 		return "", nil, err
 	}
-	sql := f.column
+	sql := f.getQueryColumn()
 	if not {
 		sql += " NOT"
 	}
@@ -271,7 +300,7 @@ func (f *FieldString) generateIn(sc cql.SearchClause, queryArgumentIndex int, no
 		if i > 0 {
 			sql += ", "
 		}
-		sql += fmt.Sprintf("$%d", queryArgumentIndex+i)
+		sql += f.getQueryArg(queryArgumentIndex + i)
 		anyTerms[i] = v
 	}
 	sql += ")"
@@ -305,15 +334,12 @@ func (f *FieldString) Generate(sc cql.SearchClause, queryArgumentIndex int) (str
 			return f.generateIn(sc, queryArgumentIndex, true)
 		}
 	}
-	if !f.enableExact {
-		return "", nil, &PgError{message: "unsupported relation " + string(sc.Relation)}
-	}
 	if (f.enableLike || f.enableILike) && (sc.Relation == cql.EQ || sc.Relation == cql.EXACT || sc.Relation == cql.NE) {
 		pgTerm, ops, err := maskedLike(sc.Term)
 		if err != nil {
 			return "", nil, err
 		}
-		if ops {
+		if !f.enableExact || ops {
 			pgOp := "LIKE"
 			if f.enableILike {
 				pgOp = "ILIKE"
@@ -324,8 +350,14 @@ func (f *FieldString) Generate(sc cql.SearchClause, queryArgumentIndex int) (str
 					pgOp = "NOT ILIKE"
 				}
 			}
-			return f.column + " " + pgOp + fmt.Sprintf(" $%d", queryArgumentIndex), []any{pgTerm}, nil
+			if f.enableILike {
+				return f.column + " " + pgOp + fmt.Sprintf(" $%d", queryArgumentIndex), []any{pgTerm}, nil
+			}
+			return f.getQueryColumn() + " " + pgOp + " " + f.getQueryArg(queryArgumentIndex), []any{pgTerm}, nil
 		}
+	}
+	if !f.enableExact {
+		return "", nil, &PgError{message: "unsupported relation " + string(sc.Relation)}
 	}
 	pgTerm, err := maskedExact(sc.Term)
 	if err != nil {
@@ -335,5 +367,5 @@ func (f *FieldString) Generate(sc cql.SearchClause, queryArgumentIndex int) (str
 	if err != nil {
 		return "", nil, err
 	}
-	return f.column + " " + pgOp + fmt.Sprintf(" $%d", queryArgumentIndex), []any{pgTerm}, nil
+	return f.getQueryColumn() + " " + pgOp + " " + f.getQueryArg(queryArgumentIndex), []any{pgTerm}, nil
 }

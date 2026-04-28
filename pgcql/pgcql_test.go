@@ -58,13 +58,18 @@ func TestParsing(t *testing.T) {
 	assert.Equal(t, title.GetColumn(), "Title", "GetColumn() should return the column name")
 
 	author := NewFieldString().WithLikeOps().WithColumn("Author")
+	authorLikeOnly := NewFieldString().WithLikeOps().WithoutExact().WithColumn("Author")
+	authorLower := NewFieldString().WithLikeOps().WithLower().WithColumn("Author")
 	authori := NewFieldString().WithILikeOps().WithColumn("Author")
+	authoriLower := NewFieldString().WithILikeOps().WithLower().WithColumn("Author")
+	titleLower := NewFieldString().WithExact().WithLower().WithColumn("Title")
 
 	tag := &FieldString{}
 	tag.WithSplit().WithExact().SetColumn("T")
 
 	full := &FieldString{}
 	full.WithFullText("english").WithServerChoiceRel(cql.ALL)
+	fullLower := NewFieldString().WithFullText("english").WithLower()
 
 	tsvector := NewFieldTsVector().WithLanguage("english").WithServerChoiceRel(cql.ALL)
 
@@ -74,9 +79,14 @@ func TestParsing(t *testing.T) {
 
 	def.AddField("title", title).
 		AddField("author", author).
+		AddField("authorLikeOnly", authorLikeOnly).
+		AddField("authorLower", authorLower).
+		AddField("titleLower", titleLower).
 		AddField("authori", authori).
+		AddField("authoriLower", authoriLower).
 		AddField("cql.serverChoice", serverChoice).
 		AddField("full", full).
+		AddField("fullLower", fullLower).
 		AddField("Tag", tag).
 		AddField("any", anyf).
 		AddField("alwaysTrue", alwaysTrue).
@@ -121,8 +131,21 @@ func TestParsing(t *testing.T) {
 		{"author <> \"test\"", "Author <> $1", []any{"test"}},
 		{"author = \"test*\"", "Author LIKE $1", []any{"test%"}},
 		{"author <> \"test*\"", "Author NOT LIKE $1", []any{"test%"}},
+		{"authorLikeOnly = \"test*\"", "Author LIKE $1", []any{"test%"}},
+		{"authorLikeOnly <> \"test*\"", "Author NOT LIKE $1", []any{"test%"}},
+		{"authorLikeOnly = Test", "Author LIKE $1", []any{"Test"}},
+		{"authorLikeOnly <> Test", "Author NOT LIKE $1", []any{"Test"}},
+		{"authorLower = \"test*\"", "lower(Author) LIKE lower($1)", []any{"test%"}},
+		{"authorLower <> \"test*\"", "lower(Author) NOT LIKE lower($1)", []any{"test%"}},
+		{"authorLower = Test", "lower(Author) = lower($1)", []any{"Test"}},
 		{"authori = \"test*\"", "Author ILIKE $1", []any{"test%"}},
 		{"authori <> \"test*\"", "Author NOT ILIKE $1", []any{"test%"}},
+		{"authori = Test", "Author ILIKE $1", []any{"Test"}},
+		{"authori <> Test", "Author NOT ILIKE $1", []any{"Test"}},
+		{"authoriLower = \"test*\"", "Author ILIKE $1", []any{"test%"}},
+		{"authoriLower <> \"test*\"", "Author NOT ILIKE $1", []any{"test%"}},
+		{"authoriLower = Test", "Author ILIKE $1", []any{"Test"}},
+		{"titleLower = AbC", "lower(Title) = lower($1)", []any{"AbC"}},
 		{"title = a AND author = b c", "Title = $1 AND Author = $2", []any{"a", "b c"}},
 		{"title = 'a' OR author = 'b'", "Title = $1 OR Author = $2", []any{"'a'", "'b'"}},
 		{"title = a NOT author = b", "Title = $1 AND NOT Author = $2", []any{"a", "b"}},
@@ -157,6 +180,7 @@ func TestParsing(t *testing.T) {
 		{"full = \"a b\"", "to_tsvector('english', full) @@ to_tsquery('english', $1)", []any{"'a'&'b'"}},
 		{"full scr \"a b\"", "to_tsvector('english', full) @@ to_tsquery('english', $1)", []any{"'a'&'b'"}},
 		{"full any \"a b\"", "to_tsvector('english', full) @@ to_tsquery('english', $1)", []any{"'a'|'b'"}},
+		{"fullLower = AbC", "to_tsvector('english', fullLower) @@ to_tsquery('english', $1)", []any{"'AbC'"}},
 		{"full=\"a*\"", "to_tsvector('english', full) @@ to_tsquery('english', $1)", []any{"'a':*"}},
 		{"full=\"*\"", "error: masking op * unsupported", nil},
 		{"full=\"a*b\"", "error: masking op * supported only at end of term", nil},
