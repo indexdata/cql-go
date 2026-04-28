@@ -153,7 +153,10 @@ func TestParsing(t *testing.T) {
 		{"full = \"a b\"", "to_tsvector('english', full) @@ to_tsquery('english', $1)", []any{"'a'&'b'"}},
 		{"full scr \"a b\"", "to_tsvector('english', full) @@ to_tsquery('english', $1)", []any{"'a'&'b'"}},
 		{"full any \"a b\"", "to_tsvector('english', full) @@ to_tsquery('english', $1)", []any{"'a'|'b'"}},
-		{"full=\"a*\"", "error: masking op * unsupported", nil},
+		{"full=\"a*\"", "to_tsvector('english', full) @@ to_tsquery('english', $1)", []any{"'a':*"}},
+		{"full=\"*\"", "error: masking op * unsupported", nil},
+		{"full=\"a*b\"", "error: masking op * supported only at end of term", nil},
+		{"full=\"a**\"", "error: masking op * supported only at end of term", nil},
 		{"full > x", "error: unsupported relation >", nil},
 		{"a", "(to_tsvector('english', full) @@ to_tsquery('english', $1) OR Title = $2 OR Author = $3)", []any{"'a'", "a", "a"}},
 		{"cql.serverChoice=a", "(to_tsvector('english', full) @@ to_tsquery('english', $1) OR Title = $2 OR Author = $3)", []any{"'a'", "a", "a"}},
@@ -217,7 +220,8 @@ func TestParsing(t *testing.T) {
 		{"tsvector = \"a b\"", "tsvector @@ to_tsquery('english', $1)", []any{"'a'&'b'"}},
 		{"tsvector scr \"a b\"", "tsvector @@ to_tsquery('english', $1)", []any{"'a'&'b'"}},
 		{"tsvector any \"a b\"", "tsvector @@ to_tsquery('english', $1)", []any{"'a'|'b'"}},
-		{"tsvector=\"a*\"", "error: masking op * unsupported", nil},
+		{"tsvector=\"a*\"", "tsvector @@ to_tsquery('english', $1)", []any{"'a':*"}},
+		{"tsvector=\"a*b\"", "error: masking op * supported only at end of term", nil},
 		{"tsvector > x", "error: unsupported relation >", nil},
 	} {
 		var parser cql.Parser
