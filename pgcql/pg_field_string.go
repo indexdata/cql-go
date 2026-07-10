@@ -205,18 +205,17 @@ func maskedSplitTsTerms(cqlTerm string, splitChars string) ([]string, error) {
 			backslash = false
 			continue
 		}
+		if strings.ContainsRune(splitChars, c) {
+			appendTerm()
+			continue
+		}
+		if c == '\\' {
+			backslash = true
+			continue
+		}
 		if wildcard {
-			if strings.ContainsRune(splitChars, c) {
-				appendTerm()
-				continue
-			}
-			if c == '\\' {
-				backslash = true
-				continue
-			}
 			return terms, fmt.Errorf("masking op * supported only at end of term")
 		}
-
 		switch c {
 		case '*':
 			if len(pgTerm) == 0 {
@@ -227,13 +226,7 @@ func maskedSplitTsTerms(cqlTerm string, splitChars string) ([]string, error) {
 			return terms, fmt.Errorf("masking op ? unsupported")
 		case '^':
 			return terms, fmt.Errorf("anchor op ^ unsupported")
-		case '\\':
-			backslash = true
 		default:
-			if strings.ContainsRune(splitChars, c) {
-				appendTerm()
-				continue
-			}
 			pgTerm = append(pgTerm, c)
 		}
 	}
