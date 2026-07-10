@@ -268,11 +268,11 @@ func maskedLike(cqlTerm string, prefixMatchOnly bool) (string, bool, error) {
 			}
 			backslash = false
 		} else {
+			if c == '\\' {
+				backslash = true
+				continue
+			}
 			if prefixMatchOnly && wildcard {
-				if c == '\\' {
-					backslash = true
-					continue
-				}
 				return "", false, fmt.Errorf("masking ops * and ? supported only at end of term")
 			}
 			switch c {
@@ -290,8 +290,6 @@ func maskedLike(cqlTerm string, prefixMatchOnly bool) (string, bool, error) {
 				}
 			case '^':
 				return "", false, fmt.Errorf("anchor op ^ unsupported")
-			case '\\':
-				backslash = true
 			case '%', '_':
 				pgTerm = append(pgTerm, '\\', c)
 			default:
