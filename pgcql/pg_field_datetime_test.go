@@ -54,6 +54,11 @@ func TestDateTimeWithinInvalid(t *testing.T) {
 			_, args, err := field.Generate(cql.SearchClause{Relation: cql.WITHIN, Term: term}, 1)
 			require.Error(t, err, "term %q, onlyDate %v", term, onlyDate)
 			require.IsType(t, &PgError{}, err)
+			if onlyDate {
+				require.EqualError(t, err, fmt.Sprintf("invalid within range %q, expected two valid date endpoints in format YYYY-MM-DD", term))
+			} else {
+				require.EqualError(t, err, fmt.Sprintf("invalid within range %q, expected two valid date or date time endpoints", term))
+			}
 			require.Nil(t, args)
 		}
 	}

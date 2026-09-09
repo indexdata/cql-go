@@ -69,7 +69,11 @@ func (f *FieldDateTime) generateWithin(term string, queryArgumentIndex int) (str
 			return fmt.Sprintf("(%s >= $%d AND %s <= $%d)", f.column, queryArgumentIndex, f.column, queryArgumentIndex+1), []any{lower, upper}, nil
 		}
 	}
-	return "", nil, &PgError{message: fmt.Sprintf("invalid within range %s, expected two valid date or date time endpoints", term)}
+	expected := "two valid date or date time endpoints"
+	if f.isDate {
+		expected = "two valid date endpoints in format YYYY-MM-DD"
+	}
+	return "", nil, &PgError{message: fmt.Sprintf("invalid within range %q, expected %s", term, expected)}
 }
 
 func (f *FieldDateTime) parseTerm(term string) (time.Time, error) {
