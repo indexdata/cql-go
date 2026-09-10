@@ -2,6 +2,7 @@ package pgcql
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/indexdata/cql-go/cql"
@@ -34,6 +35,9 @@ func (f *FieldDateTime) Generate(sc cql.SearchClause, queryArgumentIndex int) (s
 	if s != "" {
 		return s, []any{}, nil
 	}
+	if sc.Relation == cql.WITHIN {
+		return f.generateWithin(sc.Term, queryArgumentIndex)
+	}
 	relOrdered, err := f.handleOrderedRelation(sc)
 	if err != nil {
 		return "", nil, err
@@ -47,6 +51,29 @@ func (f *FieldDateTime) Generate(sc cql.SearchClause, queryArgumentIndex int) (s
 		}
 	}
 	return f.column + " " + relOrdered + fmt.Sprintf(" $%d", queryArgumentIndex), []any{number}, nil
+}
+
+func (f *FieldDateTime) generateWithin(term string, queryArgumentIndex int) (string, []any, error) {
+	parts := strings.Fields(term)
+	// Each endpoint can contain a space between its date and time.
+	if len(parts) >= 2 && len(parts) <= 4 {
+		for i := 1; i < len(parts); i++ {
+			lower, err := f.parseTerm(strings.Join(parts[:i], " "))
+			if err != nil {
+				continue
+			}
+			upper, err := f.parseTerm(strings.Join(parts[i:], " "))
+			if err != nil {
+				continue
+			}
+			return fmt.Sprintf("(%s >= $%d AND %s <= $%d)", f.column, queryArgumentIndex, f.column, queryArgumentIndex+1), []any{lower, upper}, nil
+		}
+	}
+	expected := "two valid date or date time endpoints"
+	if f.isDate {
+		expected = "two valid date endpoints in format YYYY-MM-DD"
+	}
+	return "", nil, &PgError{message: fmt.Sprintf("invalid within range %q, expected %s", term, expected)}
 }
 
 func (f *FieldDateTime) parseTerm(term string) (time.Time, error) {
