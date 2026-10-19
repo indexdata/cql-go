@@ -140,3 +140,33 @@ Handle query and inspect rows
     assert.NoErrorf(t, err, "failed to execute query '%s' sqlQuery='%s'", query, sqlQuery)
     // inspect rows
     rows.Close()
+
+## Searching related string values
+
+`FieldExistsString` filters outer rows using `EXISTS` against a related table,
+without duplicating results when several related rows match. For an outer query
+such as `SELECT p.id FROM parent p WHERE ...`:
+
+```go
+def := pgcql.NewPgDefinition()
+def.AddField("label", pgcql.NewFieldExistsString(
+    "child", "v", "v.parent_id = p.id", "v.value",
+).WithField(pgcql.NewFieldString().WithLikeOps().WithLower()))
+```
+
+This makes `label = "ABC*"` match any child value starting with `abc`, ignoring
+case. The default matcher is case-sensitive; `WithField` customizes it using the
+existing `FieldString` options. Query terms are bound parameters. The table,
+alias, correlation, value expression, and optional sort expression must be
+trusted application SQL, never user input. Parenthesize compound SQL expressions
+when needed to preserve their precedence.
+
+`label <> "ABC*"` requires that **no** child match, including parents with no
+children. `label = ""` (also `==` and `exact`) requires that no child have a
+non-NULL, non-empty value; `label <> ""` requires at least one such value.
+Separate CQL clauses can match different children of the same parent.
+
+Sorting is rejected by default because a parent can have multiple child values.
+Use `WithSortExpression` only with an expression valid in the outer query, such
+as `p.name`. `SetColumn` sets the registration name; it does not change the child
+value expression passed to the constructor.
