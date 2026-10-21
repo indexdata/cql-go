@@ -62,11 +62,18 @@ func (f *FieldDateTime) generateWithin(term string, queryArgumentIndex int) (str
 			if err != nil {
 				continue
 			}
-			upper, err := f.parseTerm(strings.Join(parts[i:], " "))
+			upperTerm := strings.Join(parts[i:], " ")
+			upper, err := f.parseTerm(upperTerm)
 			if err != nil {
 				continue
 			}
-			return fmt.Sprintf("(%s >= $%d AND %s <= $%d)", f.column, queryArgumentIndex, f.column, queryArgumentIndex+1), []any{lower, upper}, nil
+			upperRelation := "<="
+			if !f.isDate && len(upperTerm) == len(dateFormat) {
+				// Include the entire upper day without depending on timestamp precision.
+				upper = upper.AddDate(0, 0, 1)
+				upperRelation = "<"
+			}
+			return fmt.Sprintf("(%s >= $%d AND %s %s $%d)", f.column, queryArgumentIndex, f.column, upperRelation, queryArgumentIndex+1), []any{lower, upper}, nil
 		}
 	}
 	expected := "two valid date or date time endpoints"
