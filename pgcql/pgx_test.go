@@ -9,6 +9,7 @@ import (
 	"github.com/indexdata/cql-go/cql"
 	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -165,6 +166,12 @@ func TestPgx(t *testing.T) {
 			{"start_date >= 2026-03-05", []int{1, 2}},
 			{"start_date > 2026-03-05", []int{2}},
 			{"start_date = 2026-03-05", []int{1}},
+			{`start_date within "2026-03-05 2026-03-06"`, []int{1, 2}},
+			{`start_date within "2026-03-05 2026-03-05"`, []int{1}},
+			{`created_at within "2026-03-05 2026-03-06"`, []int{1, 2}},
+			{`created_at within "2026-03-05 2026-03-05"`, []int{1}},
+			{`created_at within "2026-03-05 2026-03-06T00:00:00Z"`, []int{1}},
+			{`created_at within "2026-03-05 2026-03-06 09:34:27"`, []int{1, 2}},
 			{"created_at > 2026-03-05", []int{1, 2}},
 			{"created_at > 2026-03-05 10:00:00", []int{2}},
 			{"created_at = \"\"", []int{1, 2}},
@@ -175,6 +182,28 @@ func TestPgx(t *testing.T) {
 		} {
 			runQuery(t, parser, conn, ctx, def, testcase.query, testcase.expectedIds)
 		}
+	})
+
+	t.Run("within date upper bound", func(t *testing.T) {
+		def := NewPgDefinition().AddField("created_at", NewFieldDate())
+		var parser cql.Parser
+		q, err := parser.Parse(`created_at within "2025-02-01 2025-02-28"`)
+		require.NoError(t, err)
+		res, err := def.Parse(q, 1)
+		require.NoError(t, err)
+		rows, err := conn.Query(ctx, `SELECT id FROM (VALUES
+			(1, timestamp '2025-01-31 23:59:59.999999'),
+			(2, timestamp '2025-02-01 00:00:00'),
+			(3, timestamp '2025-02-28 00:00:00'),
+			(4, timestamp '2025-02-28 12:00:00'),
+			(5, timestamp '2025-02-28 23:59:59.999999'),
+			(6, timestamp '2025-03-01 00:00:00')
+		) AS dates(id, created_at) WHERE `+res.GetWhereClause()+` ORDER BY id`, res.GetQueryArguments()...)
+		require.NoError(t, err)
+		defer rows.Close()
+		ids, err := pgx.CollectRows(rows, pgx.RowTo[int])
+		require.NoError(t, err)
+		require.Equal(t, []int{2, 3, 4, 5}, ids)
 	})
 
 	t.Run("like ops", func(t *testing.T) {
